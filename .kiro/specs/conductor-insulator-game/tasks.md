@@ -110,7 +110,10 @@
   - Handle game reset functionality
   - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 9. Polish visual design and user experience
+- [x] 9. Polish visual design and user experience
+
+
+
   - Apply color scheme for conductors (metallic) and insulators (non-metallic)
   - Add hover effects and visual feedback for interactive elements
   - Implement smooth animations for drag-and-drop interactions
@@ -118,7 +121,12 @@
   - Ensure responsive layout works on different screen sizes
   - _Requirements: 1.1, 2.4, 3.2, 5.5, 6.1_
 
-- [ ] 10. Implement item removal functionality
+- [x] 10. Implement item removal functionality
+
+
+
+
+
   - Add drag-based removal system for placed circuit items
   - Implement distance threshold detection for removal trigger
   - Create returnItemToBank function to restore items to item bank

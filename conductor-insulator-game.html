@@ -375,7 +375,7 @@
                     <button id="reset-btn">🔄 Reset Game</button>
                 </div>
                 <div id="feedback-area">
-                    Try different materials in the gaps to see which ones allow electricity to flow! Click placed items to remove them.
+                    Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.
                 </div>
             </div>
         </div>
@@ -914,7 +914,6 @@
             // Create the main item sprite
             const itemSprite = scene.add.rectangle(pos.x, pos.y, 40, 20, item.color);
             itemSprite.setStrokeStyle(2, 0x000000);
-            itemSprite.setInteractive({ draggable: true }); // Make it clickable and draggable for removal
             
             // Add neutral type indicator on the sprite
             const typeIndicator = scene.add.rectangle(pos.x, pos.y - 15, 40, 8, 0x666666);
@@ -931,94 +930,179 @@
             item.originalGridX = x;
             item.originalGridY = y;
             
-            // Add removal hint on hover
-            itemSprite.on('pointerover', function() {
-                this.setStrokeStyle(3, 0xFF6B6B);
-                // Show tooltip hint
-                if (!item.isDragging) {
-                    showFeedback('💡 Tip: Click or drag this item away to remove it from the circuit!', 'info');
-                }
-            });
-            
-            itemSprite.on('pointerout', function() {
-                if (!item.isDragging) {
-                    this.setStrokeStyle(2, 0x000000);
-                }
-            });
-            
-            // Add drag functionality for removal
-            itemSprite.on('dragstart', function(pointer, dragX, dragY) {
-                item.isDragging = true;
-                this.setStrokeStyle(3, 0xFF6B6B);
-                this.setDepth(1000); // Bring to front
-                typeIndicator.setDepth(1000);
-                label.setDepth(1000);
-            });
-            
-            itemSprite.on('drag', function(pointer, dragX, dragY) {
-                this.x = dragX;
-                this.y = dragY;
-                typeIndicator.x = dragX;
-                typeIndicator.y = dragY - 15;
-                label.x = dragX;
-                label.y = dragY + 20;
+            // Only make draggable if it's not a pre-placed component
+            if (!isPreplacedComponent(x, y)) {
+                itemSprite.setInteractive({ draggable: true });
                 
-                // Check distance from original position
-                const distance = Phaser.Math.Distance.Between(dragX, dragY, item.originalX, item.originalY);
-                const removalThreshold = 80; // pixels
-                
-                if (distance > removalThreshold) {
-                    // Visual feedback for removal
-                    this.setStrokeStyle(4, 0xFF0000);
-                    this.setAlpha(0.7);
-                } else {
-                    // Visual feedback for return to position
+                // Add removal hint on hover
+                itemSprite.on('pointerover', function() {
                     this.setStrokeStyle(3, 0xFF6B6B);
-                    this.setAlpha(1.0);
-                }
-            });
-            
-            itemSprite.on('dragend', function(pointer, dragX, dragY) {
-                item.isDragging = false;
+                    // Show tooltip hint
+                    if (!item.isDragging) {
+                        showFeedback('💡 Tip: Drag this item away to remove it from the circuit!', 'info');
+                    }
+                });
                 
-                // Check distance from original position
-                const distance = Phaser.Math.Distance.Between(dragX, dragY, item.originalX, item.originalY);
-                const removalThreshold = 80; // pixels
+                itemSprite.on('pointerout', function() {
+                    if (!item.isDragging) {
+                        this.setStrokeStyle(2, 0x000000);
+                    }
+                });
                 
-                if (distance > removalThreshold) {
-                    // Remove item and return to bank
-                    returnItemToBank(item);
+                // Enhanced drag functionality for removal with distance threshold detection
+                itemSprite.on('dragstart', function(pointer, dragX, dragY) {
+                    console.log('Started dragging placed item for potential removal');
+                    item.isDragging = true;
                     
-                    // Show gap indicator again
-                    const gap = gameState.gaps.find(g => 
-                        g.x === item.originalGridX && g.y === item.originalGridY
+                    // Visual feedback - make semi-transparent and bring to front
+                    this.setAlpha(0.8);
+                    this.setDepth(1000);
+                    typeIndicator.setDepth(1000);
+                    label.setDepth(1000);
+                    
+                    // Change stroke to indicate dragging
+                    this.setStrokeStyle(3, 0xFF6B6B);
+                    
+                    // Show initial drag feedback
+                    showFeedback('Drag away from circuit to remove item', 'info');
+                });
+                
+                itemSprite.on('drag', function(pointer, dragX, dragY) {
+                    // Update positions
+                    this.x = dragX;
+                    this.y = dragY;
+                    typeIndicator.x = dragX;
+                    typeIndicator.y = dragY - 15;
+                    label.x = dragX;
+                    label.y = dragY + 20;
+                    
+                    // Enhanced distance threshold detection
+                    const distance = Phaser.Math.Distance.Between(
+                        item.originalX, item.originalY, dragX, dragY
                     );
-                    if (gap) {
-                        gap.filled = false;
-                        if (gap.sprite) {
-                            gap.sprite.setVisible(true);
+                    
+                    const REMOVAL_THRESHOLD = 80; // pixels - configurable threshold
+                    
+                    if (distance > REMOVAL_THRESHOLD) {
+                        // Visual feedback for removal zone
+                        this.setStrokeStyle(4, 0xFF0000);
+                        this.setAlpha(0.6);
+                        
+                        // Show removal hint with icon
+                        if (!item.removalHint) {
+                            item.removalHint = scene.add.text(dragX, dragY - 40, '🗑️ Release to remove', {
+                                fontSize: '12px',
+                                fill: '#FF0000',
+                                backgroundColor: '#ffffff',
+                                padding: { x: 6, y: 3 }
+                            }).setOrigin(0.5).setDepth(1001);
+                        } else {
+                            item.removalHint.x = dragX;
+                            item.removalHint.y = dragY - 40;
                         }
+                        
+                        // Update feedback message
+                        showFeedback('Release to remove item from circuit', 'error');
+                    } else {
+                        // Normal drag visual feedback
+                        this.setStrokeStyle(3, 0xFF6B6B);
+                        this.setAlpha(0.8);
+                        
+                        // Hide removal hint
+                        if (item.removalHint) {
+                            item.removalHint.destroy();
+                            item.removalHint = null;
+                        }
+                        
+                        // Update feedback message
+                        const remainingDistance = Math.ceil(REMOVAL_THRESHOLD - distance);
+                        showFeedback(`Drag ${remainingDistance}px further to remove item`, 'info');
+                    }
+                });
+                
+                itemSprite.on('dragend', function(pointer, dragX, dragY) {
+                    console.log('Ended dragging placed item');
+                    item.isDragging = false;
+                    
+                    // Clean up removal hint
+                    if (item.removalHint) {
+                        item.removalHint.destroy();
+                        item.removalHint = null;
                     }
                     
-                    // Show feedback
-                    showFeedback('Item returned to bank! Drag items away to remove them.', 'info');
-                } else {
-                    // Return to original position
-                    this.x = item.originalX;
-                    this.y = item.originalY;
-                    typeIndicator.x = item.originalX;
-                    typeIndicator.y = item.originalY - 15;
-                    label.x = item.originalX;
-                    label.y = item.originalY + 20;
+                    // Check distance from original position
+                    const distance = Phaser.Math.Distance.Between(
+                        item.originalX, item.originalY, dragX, dragY
+                    );
                     
-                    // Reset visual state
+                    const REMOVAL_THRESHOLD = 80; // pixels
+                    
+                    if (distance > REMOVAL_THRESHOLD) {
+                        console.log('Item dragged beyond removal threshold - removing');
+                        console.log('Sprite position before removal:', this.x, this.y);
+                        console.log('Original position:', item.originalX, item.originalY);
+                        
+                        // Disable dragging to prevent further interaction
+                        this.disableInteractive();
+                        
+                        // Enhanced return to bank with animation (handles gap state internally)
+                        returnItemToBank(item);
+                        
+                        // Show success feedback with animation
+                        showFeedback('✅ Item returned to bank! You can place it again.', 'success');
+                    } else {
+                        // Return to original position with smooth animation
+                        scene.tweens.add({
+                            targets: this,
+                            x: item.originalX,
+                            y: item.originalY,
+                            duration: 300,
+                            ease: 'Back.easeOut'
+                        });
+                        
+                        scene.tweens.add({
+                            targets: typeIndicator,
+                            x: item.originalX,
+                            y: item.originalY - 15,
+                            duration: 300,
+                            ease: 'Back.easeOut'
+                        });
+                        
+                        scene.tweens.add({
+                            targets: label,
+                            x: item.originalX,
+                            y: item.originalY + 20,
+                            duration: 300,
+                            ease: 'Back.easeOut'
+                        });
+                        
+                        // Reset visual state
+                        this.setStrokeStyle(2, 0x000000);
+                        this.setAlpha(1.0);
+                        this.setDepth(0);
+                        typeIndicator.setDepth(0);
+                        label.setDepth(0);
+                        
+                        // Show feedback
+                        showFeedback('Item returned to position. Drag further to remove.', 'info');
+                    }
+                });
+            } else {
+                // For pre-placed components, show feedback that they can't be removed
+                itemSprite.setInteractive();
+                itemSprite.on('pointerdown', function() {
+                    showFeedback('❌ Pre-placed components (battery, bulb, wires) cannot be removed', 'error');
+                });
+                
+                itemSprite.on('pointerover', function() {
+                    this.setStrokeStyle(3, 0xFFAA00);
+                    showFeedback('This is a pre-placed component and cannot be removed', 'info');
+                });
+                
+                itemSprite.on('pointerout', function() {
                     this.setStrokeStyle(2, 0x000000);
-                    this.setAlpha(1.0);
-                    this.setDepth(0);
-                    typeIndicator.setDepth(0);
-                    label.setDepth(0);
-                }
-            });
+                });
+            }
             
             // Group all components
             const spriteGroup = scene.add.group([itemSprite, typeIndicator, label]);
@@ -1031,16 +1115,121 @@
         }
 
         function returnItemToBank(item) {
-            if (item.sprite) {
-                item.sprite.destroy();
+            console.log('Returning item to bank:', item.name);
+            
+            // Store the original grid position before clearing item state
+            const originalGridX = item.gridX >= 0 ? item.gridX : item.originalGridX;
+            const originalGridY = item.gridY >= 0 ? item.gridY : item.originalGridY;
+            
+            // Immediately destroy the sprite to prevent visual duplication
+            if (item.sprite && item.mainSprite) {
+                // Create a temporary sprite for the return animation from the original position
+                const originalPos = gridToWorld(originalGridX, originalGridY);
+                const tempSprite = scene.add.rectangle(
+                    originalPos.x, 
+                    originalPos.y, 
+                    40, 20, 
+                    item.color
+                );
+                tempSprite.setStrokeStyle(2, 0x4CAF50);
+                tempSprite.setDepth(2000);
+                
+                // Immediately hide and destroy all sprite components
+                try {
+                    // First, make all sprites invisible immediately
+                    if (item.sprite.children && item.sprite.children.entries) {
+                        item.sprite.children.entries.forEach(child => {
+                            if (child) {
+                                child.setVisible(false);
+                                child.setActive(false);
+                            }
+                        });
+                    }
+                    
+                    // Also hide the main sprite directly if accessible
+                    if (item.mainSprite) {
+                        item.mainSprite.setVisible(false);
+                        item.mainSprite.setActive(false);
+                    }
+                    
+                    // Clear the group
+                    item.sprite.clear(true, true); // Remove and destroy all children
+                    
+                    // Destroy the group itself
+                    item.sprite.destroy();
+                    
+                } catch (error) {
+                    console.warn('Error destroying sprite:', error);
+                    // Fallback: try to destroy the group directly
+                    if (item.sprite && item.sprite.destroy) {
+                        item.sprite.destroy();
+                    }
+                }
+                
+                // Clear references
                 item.sprite = null;
                 item.mainSprite = null;
+                
+                // Animate the temporary sprite moving to item bank area
+                const itemBankElement = item.htmlElement;
+                const itemBankRect = itemBankElement ? itemBankElement.getBoundingClientRect() : null;
+                const canvas = document.querySelector('canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                let targetX = 50; // Default fallback position
+                let targetY = 50;
+                
+                if (itemBankRect && canvasRect) {
+                    // Calculate relative position within canvas
+                    targetX = itemBankRect.left - canvasRect.left + itemBankRect.width / 2;
+                    targetY = itemBankRect.top - canvasRect.top + itemBankRect.height / 2;
+                }
+                
+                // Animate return to bank
+                scene.tweens.add({
+                    targets: tempSprite,
+                    x: targetX,
+                    y: targetY,
+                    scaleX: 0.5,
+                    scaleY: 0.5,
+                    alpha: 0.8,
+                    duration: 500,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        tempSprite.destroy();
+                        
+                        // Flash the HTML element to show it's back
+                        if (itemBankElement) {
+                            itemBankElement.style.animation = 'pulse 0.5s ease-in-out';
+                            setTimeout(() => {
+                                itemBankElement.style.animation = '';
+                            }, 500);
+                        }
+                    }
+                });
             }
             
             // Clear grid position
-            if (item.gridX >= 0 && item.gridY >= 0) {
-                setGridPosition(item.gridX, item.gridY, null);
+            if (originalGridX >= 0 && originalGridY >= 0) {
+                setGridPosition(originalGridX, originalGridY, null);
             }
+            
+            // Handle gap state - only show gap indicator if this was actually a gap position
+            const gap = gameState.gaps.find(g => 
+                g.x === originalGridX && g.y === originalGridY
+            );
+            if (gap) {
+                gap.filled = false;
+                if (gap.sprite) {
+                    gap.sprite.setVisible(true);
+                }
+                console.log('Gap indicator restored for position:', originalGridX, originalGridY);
+            } else {
+                console.log('No gap found at position:', originalGridX, originalGridY, '- this is correct for non-gap positions');
+            }
+            
+            // Ensure all drop zone highlights are cleared (removes green highlighting)
+            highlightDropZones(false);
             
             // Reset item state
             item.inBank = true;
@@ -1048,17 +1237,34 @@
             item.gridX = -1;
             item.gridY = -1;
             item.isDragging = false;
+            
+            // Clear any stored positions
             item.originalX = undefined;
             item.originalY = undefined;
             item.originalGridX = undefined;
             item.originalGridY = undefined;
             
-            // Show HTML element again
+            // Clean up any removal hints
+            if (item.removalHint) {
+                item.removalHint.destroy();
+                item.removalHint = null;
+            }
+            
+            // Show HTML element again with enhanced visual feedback
             if (item.htmlElement) {
                 item.htmlElement.style.display = 'flex';
                 item.htmlElement.style.cursor = 'grab';
                 item.htmlElement.style.opacity = '1';
+                item.htmlElement.style.transform = 'scale(1)';
+                
+                // Add a brief highlight effect
+                item.htmlElement.style.boxShadow = '0 0 10px #4CAF50';
+                setTimeout(() => {
+                    item.htmlElement.style.boxShadow = '';
+                }, 1000);
             }
+            
+            console.log('Item successfully returned to bank');
         }
 
         function placeItemOnGrid(item, gridX, gridY) {
@@ -1361,23 +1567,18 @@
                 );
                 
                 if (clickedItem && clickedItem.placed && !clickedItem.isDragging) {
-                    // Only handle click removal if not dragging
-                    // Return item to bank
-                    returnItemToBank(clickedItem);
-                    
-                    // Show gap indicator again
-                    const gap = gameState.gaps.find(g => 
-                        g.x === clickedItem.gridX && g.y === clickedItem.gridY
-                    );
-                    if (gap) {
-                        gap.filled = false;
-                        if (gap.sprite) {
-                            gap.sprite.setVisible(true);
-                        }
+                    // Check if it's a pre-placed component
+                    if (isPreplacedComponent(clickedItem.gridX, clickedItem.gridY)) {
+                        showFeedback('❌ Pre-placed components cannot be removed', 'error');
+                        return;
                     }
                     
-                    // Show feedback
-                    showFeedback('Item returned to bank! Click or drag items away to remove them.', 'info');
+                    // Only handle click removal if not dragging and not pre-placed
+                    // Return item to bank (handles gap state internally)
+                    returnItemToBank(clickedItem);
+                    
+                    // Show enhanced feedback
+                    showFeedback('✅ Item returned to bank! You can place it again or try different materials.', 'success');
                 }
             });
         }
@@ -1388,6 +1589,12 @@
                 x: gridX * gameState.cellSize + gameState.cellSize / 2,
                 y: gridY * gameState.cellSize + gameState.cellSize / 2
             };
+        }
+
+        function isPreplacedComponent(gridX, gridY) {
+            // Check if position contains battery, bulb, or pre-placed wire
+            const gridContent = getGridPosition(gridX, gridY);
+            return gridContent === 'battery' || gridContent === 'bulb' || gridContent === 'wire';
         }
 
         function worldToGrid(worldX, worldY) {
@@ -1424,10 +1631,14 @@
 
         // Circuit evaluation functions
         function evaluateCircuit() {
-            console.log('Evaluating circuit...');
+            console.log('=== EVALUATING CIRCUIT ===');
             
-            // Don't require all gaps to be filled - just check if there's a complete conductive path
-            // This allows testing with partial solutions
+            // Debug: Show current state of gaps
+            console.log('Gap states:');
+            gameState.gaps.forEach((gap, index) => {
+                const item = getGridPosition(gap.x, gap.y);
+                console.log(`Gap ${index} at (${gap.x},${gap.y}): filled=${gap.filled}, item=`, item);
+            });
             
             // Find path from battery positive to battery negative through the bulb
             const hasCompletePath = findCircuitPath();
@@ -1441,41 +1652,76 @@
         function findCircuitPath() {
             // Two-wire circuit: positive terminal -> top wire -> bulb -> bottom wire -> negative terminal
             
-            // Start from battery positive terminal (top wire)
-            const startX = gameState.battery.x + 1;
-            const startY = gameState.battery.y - 1; // Top wire (y=3)
+            // Check if we can trace a complete path from battery positive to battery negative through the bulb
+            // The path must go: battery positive -> top wire -> bulb top -> bulb bottom -> bottom wire -> battery negative
             
-            // End at battery negative terminal (bottom wire)  
-            const endX = gameState.battery.x + 1;
-            const endY = gameState.battery.y + 1; // Bottom wire (y=5)
+            const batteryPosX = gameState.battery.x + 1; // Position right of battery
+            const topWireY = gameState.battery.y - 1;    // Top wire (y=3)
+            const bottomWireY = gameState.battery.y + 1; // Bottom wire (y=5)
+            const bulbTopY = gameState.bulb.y - 1;       // Bulb top connection
+            const bulbBottomY = gameState.bulb.y + 1;    // Bulb bottom connection
             
-            // Use breadth-first search to find conductive path
-            const queue = [{x: startX, y: startY, path: []}];
+            console.log('Checking circuit path...');
+            console.log('Battery at:', gameState.battery.x, gameState.battery.y);
+            console.log('Bulb at:', gameState.bulb.x, gameState.bulb.y);
+            
+            // Check path from battery positive terminal to bulb via top wire
+            const topPathComplete = checkPathSegment(batteryPosX, topWireY, gameState.bulb.x, bulbTopY);
+            console.log('Top path (battery to bulb):', topPathComplete);
+            
+            // Check path from bulb to battery negative terminal via bottom wire  
+            const bottomPathComplete = checkPathSegment(gameState.bulb.x, bulbBottomY, batteryPosX, bottomWireY);
+            console.log('Bottom path (bulb to battery):', bottomPathComplete);
+            
+            // Check if bulb connections are conductive (bulb acts as a bridge between top and bottom)
+            const bulbConnected = isConductive(gameState.bulb.x, bulbTopY) && 
+                                 isConductive(gameState.bulb.x, bulbBottomY);
+            console.log('Bulb connected:', bulbConnected);
+            
+            const circuitComplete = topPathComplete && bottomPathComplete && bulbConnected;
+            console.log('Circuit complete:', circuitComplete);
+            
+            return circuitComplete;
+        }
+        
+        function checkPathSegment(startX, startY, endX, endY) {
+            // Check if there's a continuous conductive path between two points
+            console.log(`Checking path from (${startX},${startY}) to (${endX},${endY})`);
+            
+            // For horizontal wire segments, check each position along the path
+            if (startY === endY) {
+                // Horizontal path - check each position from start to end
+                const minX = Math.min(startX, endX);
+                const maxX = Math.max(startX, endX);
+                
+                for (let x = minX; x <= maxX; x++) {
+                    if (!isConductive(x, startY)) {
+                        console.log(`Path blocked at (${x},${startY})`);
+                        return false;
+                    }
+                }
+                console.log(`Complete horizontal path found from (${startX},${startY}) to (${endX},${endY})`);
+                return true;
+            }
+            
+            // For other paths, use breadth-first search
+            const queue = [{x: startX, y: startY}];
             const visited = new Set();
-            let bulbVisited = false;
             
             while (queue.length > 0) {
                 const current = queue.shift();
                 const key = `${current.x},${current.y}`;
                 
-                // Skip if already visited
                 if (visited.has(key)) continue;
                 visited.add(key);
                 
-                // Check if we reached the end (battery negative terminal via bottom wire)
-                if (current.x === endX && current.y === endY && bulbVisited) {
-                    console.log('Complete circuit found through bulb!');
+                // Check if we reached the destination
+                if (current.x === endX && current.y === endY) {
+                    console.log(`Path found from (${startX},${startY}) to (${endX},${endY})`);
                     return true;
                 }
                 
-                // Check if we're at the bulb (either top or bottom connection)
-                if (current.x === gameState.bulb.x && 
-                    (current.y === gameState.bulb.y - 1 || current.y === gameState.bulb.y + 1)) {
-                    bulbVisited = true;
-                    console.log('Path goes through bulb');
-                }
-                
-                // Get adjacent positions
+                // Check adjacent positions
                 const adjacent = [
                     {x: current.x + 1, y: current.y},
                     {x: current.x - 1, y: current.y},
@@ -1486,16 +1732,12 @@
                 adjacent.forEach(pos => {
                     const adjKey = `${pos.x},${pos.y}`;
                     if (!visited.has(adjKey) && isConductive(pos.x, pos.y)) {
-                        queue.push({
-                            x: pos.x, 
-                            y: pos.y, 
-                            path: [...current.path, {x: current.x, y: current.y}]
-                        });
+                        queue.push(pos);
                     }
                 });
             }
             
-            console.log('No complete circuit found');
+            console.log(`No path found from (${startX},${startY}) to (${endX},${endY})`);
             return false;
         }
 
@@ -2017,7 +2259,7 @@
             }
             
             // Reset feedback
-            showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Click or drag placed items away to remove them.', 'info');
+            showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.', 'info');
             
             console.log('Game reset');
         }
