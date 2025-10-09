@@ -2695,22 +2695,100 @@
         }
 
         function resetGame() {
-            // Return all placed items to bank
-            gameState.itemBank.forEach(item => {
-                if (item.placed) {
-                    returnItemToBank(item);
+            console.log('Starting complete game reset...');
+            
+            // 1. Remove all placed items from circuit by scanning the entire grid
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    const gridItem = gameState.grid[y][x];
+                    // Only remove items that are actual placed items (not pre-placed components)
+                    if (gridItem && typeof gridItem === 'object' && 
+                        gridItem.inBank !== undefined && gridItem.placed === true) {
+                        console.log('Removing placed item from grid:', gridItem.name, 'at', x, y);
+                        
+                        // Clear the grid position first
+                        gameState.grid[y][x] = null;
+                        
+                        // Destroy the sprite if it exists
+                        if (gridItem.sprite) {
+                            try {
+                                if (gridItem.sprite.children && gridItem.sprite.children.entries) {
+                                    gridItem.sprite.children.entries.forEach(child => {
+                                        if (child) {
+                                            child.setVisible(false);
+                                            child.destroy();
+                                        }
+                                    });
+                                }
+                                gridItem.sprite.clear(true, true);
+                                gridItem.sprite.destroy();
+                            } catch (error) {
+                                console.warn('Error destroying sprite during reset:', error);
+                            }
+                            gridItem.sprite = null;
+                            gridItem.mainSprite = null;
+                        }
+                        
+                        // Reset item state completely
+                        gridItem.inBank = true;
+                        gridItem.placed = false;
+                        gridItem.gridX = -1;
+                        gridItem.gridY = -1;
+                        gridItem.isDragging = false;
+                        
+                        // Clear any stored positions
+                        gridItem.originalX = undefined;
+                        gridItem.originalY = undefined;
+                        gridItem.originalGridX = undefined;
+                        gridItem.originalGridY = undefined;
+                        
+                        // Clean up any removal hints
+                        if (gridItem.removalHint) {
+                            gridItem.removalHint.destroy();
+                            gridItem.removalHint = null;
+                        }
+                    }
                 }
+            }
+            
+            // 2. Restore all items to original quantities in item bank
+            gameState.itemBank.forEach(item => {
+                // Reset item state to be in bank
+                item.inBank = true;
+                item.placed = false;
+                item.gridX = -1;
+                item.gridY = -1;
+                item.isDragging = false;
+                
+                // Clear any stored positions
+                item.originalX = undefined;
+                item.originalY = undefined;
+                item.originalGridX = undefined;
+                item.originalGridY = undefined;
+                
+                // Show HTML element again with proper styling
+                if (item.htmlElement) {
+                    item.htmlElement.style.display = 'flex';
+                    item.htmlElement.style.cursor = 'grab';
+                    item.htmlElement.style.opacity = '1';
+                    item.htmlElement.style.transform = 'scale(1)';
+                    item.htmlElement.style.boxShadow = '';
+                    item.htmlElement.style.animation = '';
+                }
+                
+                console.log('Restored item to bank:', item.name);
             });
             
-            // Reset all gaps
+            // 3. Clear all gap positions back to empty state
             gameState.gaps.forEach(gap => {
                 gap.filled = false;
                 if (gap.sprite) {
                     gap.sprite.setVisible(true);
                 }
+                console.log('Reset gap at position:', gap.x, gap.y);
             });
             
-            // Turn off light bulb
+            // 4. Turn off light bulb and clear any success states
             updateLightBulb(false);
             
             // Clear flow visualization
@@ -2721,16 +2799,31 @@
                 gameState.flowVisualization = [];
             }
             
-            // Clear connection graphics
+            // Hide success modal if it's showing
+            const successModal = document.getElementById('success-modal');
+            if (successModal && successModal.style.display !== 'none') {
+                successModal.style.display = 'none';
+            }
+            
+            // Clear any drag state
+            gameState.draggedItem = null;
+            gameState.isDragging = false;
+            document.body.style.cursor = 'default';
+            
+            // Clear any drop zone highlights
+            highlightDropZones(false);
+            
+            // 5. Redraw base circuit with only pre-placed components
+            // Clear connection graphics first
             clearConnectionGraphics();
             
-            // Update wire connections to show base circuit
+            // Update wire connections to show base circuit only
             updateWireConnections();
             
-            // Reset feedback
+            // Reset feedback to initial state
             showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.', 'info');
             
-            console.log('Game reset');
+            console.log('Complete game reset finished - all items returned to bank, gaps cleared, bulb off');
         }
 
         document.getElementById('reset-btn').addEventListener('click', function() {
