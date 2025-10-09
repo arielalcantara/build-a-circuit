@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conductor & Insulator Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 300;
+        }
+        
+        .game-subtitle {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            font-weight: 300;
+        }
+        
+        #game-container {
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        #right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        #game-canvas {
+            border: 3px solid rgba(255,255,255,0.3);
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        #item-bank {
+            width: 220px;
+            padding: 20px;
+            background: rgba(255,255,255,0.95);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+        }
+        
+        #item-bank h3 {
+            margin-top: 0;
+            margin-bottom: 18px;
+            color: #333;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .item-bank-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .bank-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 8px !important;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bank-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .bank-item:hover::before {
+            left: 100%;
+        }
+        
+        #controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: stretch;
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        #test-circuit-btn {
+            background-color: #FF9800;
+            font-weight: bold;
+        }
+        
+        #test-circuit-btn:hover {
+            background-color: #F57C00;
+        }
+        
+        #feedback-area {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .feedback-success {
+            background-color: #E8F5E8;
+            color: #2E7D32;
+            border: 2px solid #4CAF50;
+        }
+        
+        .feedback-error {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border: 2px solid #F44336;
+        }
+        
+        .feedback-info {
+            background-color: #E3F2FD;
+            color: #1565C0;
+            border: 2px solid #2196F3;
+        }
+        
+        #success-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        #success-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: left;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideIn 0.4s ease-out;
+        }
+        
+        #success-content h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+        }
+        
+        #success-details p {
+            margin-bottom: 15px;
+            color: #333;
+            line-height: 1.5;
+        }
+        
+        #success-explanation {
+            background-color: #E8F5E8;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            margin: 15px 0;
+        }
+        
+        #success-explanation li {
+            margin-bottom: 8px;
+            color: #2E7D32;
+            font-weight: 500;
+        }
+        
+        .conductor-text {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .insulator-text {
+            color: #F44336;
+            font-weight: bold;
+        }
+        
+        #materials-used {
+            background-color: #F3E5F5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #9C27B0;
+        }
+        
+        #materials-used h4 {
+            color: #7B1FA2;
+            margin-bottom: 10px;
+        }
+        
+        #success-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+        
+        #success-actions button {
+            flex: 1;
+            max-width: 150px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to { 
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+        
+        @keyframes slideOut {
+            from { 
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+            to { 
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            #game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            #right-panel {
+                width: 100%;
+                max-width: 400px;
+                align-items: center;
+            }
+            
+            #item-bank {
+                width: 100%;
+            }
+            
+            .item-bank-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            #game-container {
+                padding: 15px;
+            }
+            
+            .controls-row {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .controls-row button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>⚡ Conductor & Insulator Circuit Game</h1>
+    <p class="game-subtitle">Learn about electricity by building circuits with different materials!</p>
+    
+    <div id="game-container">
+        <div id="game-canvas"></div>
+        <div id="right-panel">
+            <div id="item-bank">
+                <h3>Item Bank</h3>
+                <div class="item-bank-grid" id="item-bank-grid">
+                    <!-- Items will be added here by JavaScript -->
+                </div>
+            </div>
+            
+            <div id="controls">
+                <div class="controls-row">
+                    <button id="test-circuit-btn">⚡ Test Circuit</button>
+                    <button id="reset-btn">🔄 Reset Game</button>
+                </div>
+                <div id="feedback-area">
+                    Try different materials in the gaps to see which ones allow electricity to flow! Click placed items to remove them.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div id="success-modal">
+        <div id="success-content">
+            <h2>🎉 Excellent Work!</h2>
+            <div id="success-details">
+                <p><strong>You completed the electrical circuit!</strong></p>
+                <p>The light bulb is glowing because:</p>
+                <ul id="success-explanation">
+                    <li>✅ Electricity flows from the battery's positive (+) terminal</li>
+                    <li>✅ Through the <span class="conductor-text">conductors</span> you placed</li>
+                    <li>✅ Through the light bulb (making it glow)</li>
+                    <li>✅ Back to the battery's negative (-) terminal</li>
+                </ul>
+                <div id="materials-used">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+            <div id="success-actions">
+                <button id="play-again-btn">🔄 Try Again</button>
+                <button id="new-challenge-btn">⚡ New Challenge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phaser.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    
+    <script>
+        // Game configuration
+        const config = {
+            type: Phaser.AUTO,
+            width: 720, // 12 cells * 60px
+            height: 480, // 8 cells * 60px
+            parent: 'game-canvas',
+            backgroundColor: '#ffffff',
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    debug: false
+                }
+            }
+        };
+
+        // Game variables
+        let game;
+        let scene;
+        let gameState = {
+            grid: [],
+            gridWidth: 12,
+            gridHeight: 8,
+            cellSize: 60,
+            itemBank: [],
+            placedItems: [],
+            battery: { x: 1, y: 4, sprite: null },
+            bulb: { x: 9, y: 4, sprite: null, isLit: false },
+            // Two-wire circuit: top wire (positive) and bottom wire (negative)
+            gaps: [
+                // Top wire (positive path)
+                { x: 3, y: 3, filled: false },
+                { x: 5, y: 3, filled: false },
+                { x: 7, y: 3, filled: false },
+                // Bottom wire (negative path)
+                { x: 7, y: 5, filled: false },
+                { x: 5, y: 5, filled: false },
+                { x: 3, y: 5, filled: false }
+            ],
+            preplacedWires: [
+                // Top wire connections
+                { x: 2, y: 3 }, // From battery positive
+                { x: 4, y: 3 },
+                { x: 6, y: 3 },
+                { x: 8, y: 3 }, // To bulb
+                // Bottom wire connections  
+                { x: 8, y: 5 }, // From bulb
+                { x: 6, y: 5 },
+                { x: 4, y: 5 },
+                { x: 2, y: 5 }  // To battery negative
+            ],
+            draggedItem: null,
+            isDragging: false
+        };
+
+        function preload() {
+            // We'll create simple colored rectangles instead of loading images
+            scene = this;
+        }
+
+        function create() {
+            console.log('Game scene created');
+            
+            // Initialize the grid
+            initializeGrid();
+            
+            // Draw grid lines
+            drawGrid();
+            
+            // Create circuit components
+            createCircuitComponents();
+            
+            // Create item bank
+            createItemBank();
+            
+            // Set up input handling
+            setupInputHandling();
+        }
+
+        function update() {
+            // Game loop - will be used for animations and updates
+        }
+
+        function initializeGrid() {
+            // Initialize 2D grid array
+            gameState.grid = [];
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                gameState.grid[y] = [];
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    gameState.grid[y][x] = null;
+                }
+            }
+        }
+
+        function drawGrid() {
+            const graphics = scene.add.graphics();
+            graphics.lineStyle(1, 0xcccccc, 0.3);
+            
+            // Draw vertical lines
+            for (let x = 0; x <= gameState.gridWidth; x++) {
+                const worldX = x * gameState.cellSize;
+                graphics.moveTo(worldX, 0);
+                graphics.lineTo(worldX, gameState.gridHeight * gameState.cellSize);
+            }
+            
+            // Draw horizontal lines
+            for (let y = 0; y <= gameState.gridHeight; y++) {
+                const worldY = y * gameState.cellSize;
+                graphics.moveTo(0, worldY);
+                graphics.lineTo(gameState.gridWidth * gameState.cellSize, worldY);
+            }
+            
+            graphics.strokePath();
+            
+            // Highlight the circuit rows (top and bottom wires)
+            graphics.lineStyle(2, 0x4CAF50, 0.3);
+            graphics.fillStyle(0x4CAF50, 0.1);
+            
+            // Top wire (row 3)
+            graphics.fillRect(0, 3 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            graphics.strokeRect(0, 3 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            
+            // Bottom wire (row 5)  
+            graphics.fillRect(0, 5 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            graphics.strokeRect(0, 5 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+        }
+
+        function createCircuitComponents() {
+            // Create battery
+            createBattery();
+            
+            // Create light bulb
+            createLightBulb();
+            
+            // Create pre-placed wires
+            createPreplacedWires();
+            
+            // Mark gaps in the grid
+            markGaps();
+        }
+
+        function createBattery() {
+            const pos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            
+            // Create battery body (taller to span both wire levels)
+            const batteryBody = scene.add.rectangle(pos.x, pos.y, 50, 50, 0x333333);
+            batteryBody.setStrokeStyle(2, 0x000000);
+            
+            // Add positive terminal (connects to top wire)
+            const positiveTerminal = scene.add.rectangle(pos.x + 25, pos.y - 15, 8, 15, 0xFF0000);
+            
+            // Add negative terminal (connects to bottom wire)
+            const negativeTerminal = scene.add.rectangle(pos.x + 25, pos.y + 15, 8, 10, 0x000000);
+            
+            // Add connection wires from terminals
+            const positiveWire = scene.add.rectangle(pos.x + 35, pos.y - 15, 20, 4, 0xCD7F32);
+            const negativeWire = scene.add.rectangle(pos.x + 35, pos.y + 15, 20, 4, 0xCD7F32);
+            
+            // Add labels
+            const positiveLabel = scene.add.text(pos.x + 25, pos.y - 35, '+', {
+                fontSize: '16px',
+                fill: '#FF0000',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+            
+            const negativeLabel = scene.add.text(pos.x + 25, pos.y + 35, '-', {
+                fontSize: '16px',
+                fill: '#000000',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+            
+            const batteryLabel = scene.add.text(pos.x, pos.y + 40, 'BATTERY', {
+                fontSize: '10px',
+                fill: '#333333'
+            }).setOrigin(0.5);
+            
+            // Group all battery components
+            gameState.battery.sprite = scene.add.group([
+                batteryBody, positiveTerminal, negativeTerminal, 
+                positiveWire, negativeWire,
+                positiveLabel, negativeLabel, batteryLabel
+            ]);
+            
+            // Mark battery position in grid
+            setGridPosition(gameState.battery.x, gameState.battery.y, 'battery');
+            // Also mark the wire connection positions
+            setGridPosition(gameState.battery.x, gameState.battery.y - 1, 'battery'); // Top connection
+            setGridPosition(gameState.battery.x, gameState.battery.y + 1, 'battery'); // Bottom connection
+        }
+
+        function createLightBulb() {
+            const pos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+            
+            // Create bulb base
+            const bulbBase = scene.add.rectangle(pos.x, pos.y, 30, 40, 0x8B4513);
+            bulbBase.setStrokeStyle(2, 0x000000);
+            
+            // Create bulb glass (will change color when lit)
+            const bulbGlass = scene.add.circle(pos.x, pos.y - 10, 15, 0xFFFFFF);
+            bulbGlass.setStrokeStyle(2, 0x000000);
+            bulbGlass.setAlpha(0.8);
+            
+            // Add connection wires to both top and bottom circuits
+            const topConnection = scene.add.rectangle(pos.x - 25, pos.y - 15, 20, 4, 0xCD7F32);
+            const bottomConnection = scene.add.rectangle(pos.x - 25, pos.y + 15, 20, 4, 0xCD7F32);
+            
+            // Add connection points on bulb
+            const topTerminal = scene.add.rectangle(pos.x - 15, pos.y - 15, 6, 4, 0x666666);
+            const bottomTerminal = scene.add.rectangle(pos.x - 15, pos.y + 15, 6, 4, 0x666666);
+            
+            const bulbLabel = scene.add.text(pos.x, pos.y + 35, 'LIGHT BULB', {
+                fontSize: '10px',
+                fill: '#333333'
+            }).setOrigin(0.5);
+            
+            // Store references for later use
+            gameState.bulb.sprite = scene.add.group([
+                bulbBase, bulbGlass, topConnection, bottomConnection,
+                topTerminal, bottomTerminal, bulbLabel
+            ]);
+            gameState.bulb.glassSprite = bulbGlass;
+            
+            // Mark bulb position in grid
+            setGridPosition(gameState.bulb.x, gameState.bulb.y, 'bulb');
+            // Also mark the wire connection positions
+            setGridPosition(gameState.bulb.x, gameState.bulb.y - 1, 'bulb'); // Top connection
+            setGridPosition(gameState.bulb.x, gameState.bulb.y + 1, 'bulb'); // Bottom connection
+        }
+
+        function createPreplacedWires() {
+            gameState.preplacedWires.forEach(wire => {
+                const pos = gridToWorld(wire.x, wire.y);
+                
+                // Create wire segment
+                const wireSprite = scene.add.rectangle(pos.x, pos.y, 40, 8, 0xCD7F32);
+                wireSprite.setStrokeStyle(1, 0x8B4513);
+                
+                // Add wire label
+                const wireLabel = scene.add.text(pos.x, pos.y + 20, 'WIRE', {
+                    fontSize: '8px',
+                    fill: '#666666'
+                }).setOrigin(0.5);
+                
+                // Store wire data
+                wire.sprite = scene.add.group([wireSprite, wireLabel]);
+                
+                // Mark wire position in grid
+                setGridPosition(wire.x, wire.y, 'wire');
+            });
+        }
+
+        function markGaps() {
+            gameState.gaps.forEach(gap => {
+                const pos = gridToWorld(gap.x, gap.y);
+                
+                // Create gap indicator (dashed outline using multiple small lines)
+                const graphics = scene.add.graphics();
+                graphics.lineStyle(2, 0xFF6B6B, 0.8);
+                
+                // Draw dashed rectangle manually
+                const x = pos.x - 25;
+                const y = pos.y - 15;
+                const width = 50;
+                const height = 30;
+                const dashLength = 5;
+                const gapLength = 5;
+                
+                // Top line
+                for (let i = 0; i < width; i += dashLength + gapLength) {
+                    const lineWidth = Math.min(dashLength, width - i);
+                    graphics.moveTo(x + i, y);
+                    graphics.lineTo(x + i + lineWidth, y);
+                }
+                
+                // Bottom line
+                for (let i = 0; i < width; i += dashLength + gapLength) {
+                    const lineWidth = Math.min(dashLength, width - i);
+                    graphics.moveTo(x + i, y + height);
+                    graphics.lineTo(x + i + lineWidth, y + height);
+                }
+                
+                // Left line
+                for (let i = 0; i < height; i += dashLength + gapLength) {
+                    const lineHeight = Math.min(dashLength, height - i);
+                    graphics.moveTo(x, y + i);
+                    graphics.lineTo(x, y + i + lineHeight);
+                }
+                
+                // Right line
+                for (let i = 0; i < height; i += dashLength + gapLength) {
+                    const lineHeight = Math.min(dashLength, height - i);
+                    graphics.moveTo(x + width, y + i);
+                    graphics.lineTo(x + width, y + i + lineHeight);
+                }
+                
+                graphics.strokePath();
+                
+                // Add gap label
+                const gapLabel = scene.add.text(pos.x, pos.y, 'MISSING\nPART', {
+                    fontSize: '10px',
+                    fill: '#FF6B6B',
+                    align: 'center'
+                }).setOrigin(0.5);
+                
+                gap.sprite = scene.add.group([graphics, gapLabel]);
+                
+                // Mark gap in grid (but keep it empty for placement)
+                setGridPosition(gap.x, gap.y, 'gap');
+            });
+        }
+
+        function updateLightBulb(isLit) {
+            if (gameState.bulb.glassSprite) {
+                if (isLit) {
+                    gameState.bulb.glassSprite.setFillStyle(0xFFFF00); // Yellow when lit
+                    gameState.bulb.glassSprite.setAlpha(1.0);
+                    
+                    // Add glow effect
+                    if (!gameState.bulb.glowEffect) {
+                        gameState.bulb.glowEffect = scene.add.circle(
+                            gameState.bulb.glassSprite.x, 
+                            gameState.bulb.glassSprite.y, 
+                            25, 0xFFFF00
+                        );
+                        gameState.bulb.glowEffect.setAlpha(0.3);
+                        gameState.bulb.glowEffect.setDepth(-1);
+                    }
+                    gameState.bulb.glowEffect.setVisible(true);
+                } else {
+                    gameState.bulb.glassSprite.setFillStyle(0xFFFFFF); // White when off
+                    gameState.bulb.glassSprite.setAlpha(0.8);
+                    
+                    if (gameState.bulb.glowEffect) {
+                        gameState.bulb.glowEffect.setVisible(false);
+                    }
+                }
+                gameState.bulb.isLit = isLit;
+            }
+        }
+
+        function createItemBank() {
+            const itemBankContainer = document.getElementById('item-bank-grid');
+            
+            // Define available items - real-world materials
+            const itemDefinitions = [
+                {
+                    id: 'copper_coin',
+                    name: 'Copper Coin',
+                    type: 'conductor',
+                    conductive: true,
+                    color: '#CD7F32',
+                    quantity: 2
+                },
+                {
+                    id: 'metal_spoon',
+                    name: 'Metal Spoon',
+                    type: 'conductor',
+                    conductive: true,
+                    color: '#C0C0C0',
+                    quantity: 2
+                },
+                {
+                    id: 'rubber_eraser',
+                    name: 'Rubber Eraser',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#FF69B4',
+                    quantity: 2
+                },
+                {
+                    id: 'wooden_pencil',
+                    name: 'Wooden Pencil',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#8B4513',
+                    quantity: 2
+                },
+                {
+                    id: 'plastic_bottle',
+                    name: 'Plastic Bottle',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#87CEEB',
+                    quantity: 1
+                },
+                {
+                    id: 'aluminum_foil',
+                    name: 'Aluminum Foil',
+                    type: 'conductor',
+                    conductive: true,
+                    color: '#B8B8B8',
+                    quantity: 2
+                }
+            ];
+            
+            // Create item bank items
+            itemDefinitions.forEach(itemDef => {
+                for (let i = 0; i < itemDef.quantity; i++) {
+                    const item = createBankItem(itemDef, i);
+                    gameState.itemBank.push(item);
+                    
+                    // Create HTML element for the item
+                    const itemElement = createItemBankElement(item);
+                    itemBankContainer.appendChild(itemElement);
+                }
+            });
+        }
+
+        function createBankItem(definition, index) {
+            return {
+                id: `${definition.id}_${index}`,
+                name: definition.name,
+                type: definition.type,
+                conductive: definition.conductive,
+                color: definition.color,
+                inBank: true,
+                placed: false,
+                sprite: null,
+                htmlElement: null,
+                gridX: -1,
+                gridY: -1
+            };
+        }
+
+        function createItemBankElement(item) {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'bank-item';
+            itemDiv.style.cssText = `
+                width: 80px;
+                height: 60px;
+                background-color: ${item.color};
+                border: 2px solid #333;
+                border-radius: 5px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                cursor: grab;
+                user-select: none;
+                transition: transform 0.2s, box-shadow 0.2s;
+                margin: 2px;
+            `;
+            
+            // Add material type indicator (without revealing if it's conductor/insulator)
+            const typeIndicator = document.createElement('div');
+            typeIndicator.style.cssText = `
+                width: 100%;
+                height: 15px;
+                background-color: #666666;
+                color: white;
+                font-size: 8px;
+                text-align: center;
+                line-height: 15px;
+                font-weight: bold;
+                margin-bottom: 2px;
+            `;
+            typeIndicator.textContent = 'MATERIAL';
+            
+            // Add item name
+            const nameLabel = document.createElement('div');
+            nameLabel.style.cssText = `
+                color: white;
+                font-size: 10px;
+                text-align: center;
+                font-weight: bold;
+                text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+                line-height: 12px;
+            `;
+            nameLabel.textContent = item.name;
+            
+            itemDiv.appendChild(typeIndicator);
+            itemDiv.appendChild(nameLabel);
+            
+            // Add hover effects
+            itemDiv.addEventListener('mouseenter', function() {
+                if (item.inBank) {
+                    this.style.transform = 'scale(1.05)';
+                    this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                }
+            });
+            
+            itemDiv.addEventListener('mouseleave', function() {
+                if (item.inBank) {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = 'none';
+                }
+            });
+            
+            // Store reference
+            item.htmlElement = itemDiv;
+            itemDiv.itemData = item;
+            
+            return itemDiv;
+        }
+
+        function createGameSprite(item, x, y) {
+            const pos = gridToWorld(x, y);
+            
+            // Create the main item sprite
+            const itemSprite = scene.add.rectangle(pos.x, pos.y, 40, 20, item.color);
+            itemSprite.setStrokeStyle(2, 0x000000);
+            itemSprite.setInteractive({ draggable: true }); // Make it clickable and draggable for removal
+            
+            // Add neutral type indicator on the sprite
+            const typeIndicator = scene.add.rectangle(pos.x, pos.y - 15, 40, 8, 0x666666);
+            
+            // Add text label
+            const label = scene.add.text(pos.x, pos.y + 20, item.name.toUpperCase(), {
+                fontSize: '8px',
+                fill: '#333333'
+            }).setOrigin(0.5);
+            
+            // Store original position for drag distance calculation
+            item.originalX = pos.x;
+            item.originalY = pos.y;
+            item.originalGridX = x;
+            item.originalGridY = y;
+            
+            // Add removal hint on hover
+            itemSprite.on('pointerover', function() {
+                this.setStrokeStyle(3, 0xFF6B6B);
+                // Show tooltip hint
+                if (!item.isDragging) {
+                    showFeedback('💡 Tip: Click or drag this item away to remove it from the circuit!', 'info');
+                }
+            });
+            
+            itemSprite.on('pointerout', function() {
+                if (!item.isDragging) {
+                    this.setStrokeStyle(2, 0x000000);
+                }
+            });
+            
+            // Add drag functionality for removal
+            itemSprite.on('dragstart', function(pointer, dragX, dragY) {
+                item.isDragging = true;
+                this.setStrokeStyle(3, 0xFF6B6B);
+                this.setDepth(1000); // Bring to front
+                typeIndicator.setDepth(1000);
+                label.setDepth(1000);
+            });
+            
+            itemSprite.on('drag', function(pointer, dragX, dragY) {
+                this.x = dragX;
+                this.y = dragY;
+                typeIndicator.x = dragX;
+                typeIndicator.y = dragY - 15;
+                label.x = dragX;
+                label.y = dragY + 20;
+                
+                // Check distance from original position
+                const distance = Phaser.Math.Distance.Between(dragX, dragY, item.originalX, item.originalY);
+                const removalThreshold = 80; // pixels
+                
+                if (distance > removalThreshold) {
+                    // Visual feedback for removal
+                    this.setStrokeStyle(4, 0xFF0000);
+                    this.setAlpha(0.7);
+                } else {
+                    // Visual feedback for return to position
+                    this.setStrokeStyle(3, 0xFF6B6B);
+                    this.setAlpha(1.0);
+                }
+            });
+            
+            itemSprite.on('dragend', function(pointer, dragX, dragY) {
+                item.isDragging = false;
+                
+                // Check distance from original position
+                const distance = Phaser.Math.Distance.Between(dragX, dragY, item.originalX, item.originalY);
+                const removalThreshold = 80; // pixels
+                
+                if (distance > removalThreshold) {
+                    // Remove item and return to bank
+                    returnItemToBank(item);
+                    
+                    // Show gap indicator again
+                    const gap = gameState.gaps.find(g => 
+                        g.x === item.originalGridX && g.y === item.originalGridY
+                    );
+                    if (gap) {
+                        gap.filled = false;
+                        if (gap.sprite) {
+                            gap.sprite.setVisible(true);
+                        }
+                    }
+                    
+                    // Show feedback
+                    showFeedback('Item returned to bank! Drag items away to remove them.', 'info');
+                } else {
+                    // Return to original position
+                    this.x = item.originalX;
+                    this.y = item.originalY;
+                    typeIndicator.x = item.originalX;
+                    typeIndicator.y = item.originalY - 15;
+                    label.x = item.originalX;
+                    label.y = item.originalY + 20;
+                    
+                    // Reset visual state
+                    this.setStrokeStyle(2, 0x000000);
+                    this.setAlpha(1.0);
+                    this.setDepth(0);
+                    typeIndicator.setDepth(0);
+                    label.setDepth(0);
+                }
+            });
+            
+            // Group all components
+            const spriteGroup = scene.add.group([itemSprite, typeIndicator, label]);
+            
+            // Store references
+            item.sprite = spriteGroup;
+            item.mainSprite = itemSprite;
+            
+            return spriteGroup;
+        }
+
+        function returnItemToBank(item) {
+            if (item.sprite) {
+                item.sprite.destroy();
+                item.sprite = null;
+                item.mainSprite = null;
+            }
+            
+            // Clear grid position
+            if (item.gridX >= 0 && item.gridY >= 0) {
+                setGridPosition(item.gridX, item.gridY, null);
+            }
+            
+            // Reset item state
+            item.inBank = true;
+            item.placed = false;
+            item.gridX = -1;
+            item.gridY = -1;
+            item.isDragging = false;
+            item.originalX = undefined;
+            item.originalY = undefined;
+            item.originalGridX = undefined;
+            item.originalGridY = undefined;
+            
+            // Show HTML element again
+            if (item.htmlElement) {
+                item.htmlElement.style.display = 'flex';
+                item.htmlElement.style.cursor = 'grab';
+                item.htmlElement.style.opacity = '1';
+            }
+        }
+
+        function placeItemOnGrid(item, gridX, gridY) {
+            // Hide HTML element
+            if (item.htmlElement) {
+                item.htmlElement.style.display = 'none';
+            }
+            
+            // Create game sprite
+            createGameSprite(item, gridX, gridY);
+            
+            // Update item state
+            item.inBank = false;
+            item.placed = true;
+            item.gridX = gridX;
+            item.gridY = gridY;
+            
+            // Update grid
+            setGridPosition(gridX, gridY, item);
+            
+            // Check if this fills a gap
+            const gap = gameState.gaps.find(g => g.x === gridX && g.y === gridY);
+            if (gap) {
+                gap.filled = true;
+                if (gap.sprite) {
+                    gap.sprite.setVisible(false);
+                }
+            }
+        }
+
+        function setupInputHandling() {
+            // Set up drag and drop for item bank items
+            setupItemBankDragDrop();
+            
+            // Set up canvas drop zone
+            setupCanvasDropZone();
+            
+            // Set up placed item interaction
+            setupPlacedItemInteraction();
+        }
+
+        function setupItemBankDragDrop() {
+            gameState.itemBank.forEach(item => {
+                if (item.htmlElement) {
+                    item.htmlElement.addEventListener('mousedown', function(e) {
+                        if (item.inBank) {
+                            startDragging(item, e);
+                        }
+                    });
+                }
+            });
+        }
+
+        function startDragging(item, e) {
+            e.preventDefault();
+            
+            gameState.draggedItem = item;
+            gameState.isDragging = true;
+            
+            // Create drag preview
+            createDragPreview(item, e.clientX, e.clientY);
+            
+            // Change cursor
+            document.body.style.cursor = 'grabbing';
+            
+            // Add global mouse move and up listeners
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
+            
+            // Highlight valid drop zones
+            highlightDropZones(true);
+        }
+
+        function createDragPreview(item, x, y) {
+            const preview = document.createElement('div');
+            preview.id = 'drag-preview';
+            preview.style.cssText = `
+                position: fixed;
+                left: ${x - 40}px;
+                top: ${y - 30}px;
+                width: 80px;
+                height: 60px;
+                background-color: ${item.color};
+                border: 2px solid #333;
+                border-radius: 5px;
+                opacity: 0.8;
+                pointer-events: none;
+                z-index: 1000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                transform: scale(0.9);
+            `;
+            
+            // Add type indicator
+            const typeIndicator = document.createElement('div');
+            typeIndicator.style.cssText = `
+                width: 100%;
+                height: 15px;
+                background-color: ${item.conductive ? '#4CAF50' : '#F44336'};
+                color: white;
+                font-size: 8px;
+                text-align: center;
+                line-height: 15px;
+                font-weight: bold;
+                margin-bottom: 2px;
+            `;
+            typeIndicator.textContent = item.conductive ? 'CONDUCTOR' : 'INSULATOR';
+            
+            // Add item name
+            const nameLabel = document.createElement('div');
+            nameLabel.style.cssText = `
+                color: white;
+                font-size: 10px;
+                text-align: center;
+                font-weight: bold;
+                text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+                line-height: 12px;
+            `;
+            nameLabel.textContent = item.name;
+            
+            preview.appendChild(typeIndicator);
+            preview.appendChild(nameLabel);
+            
+            document.body.appendChild(preview);
+        }
+
+        function handleDragMove(e) {
+            if (!gameState.isDragging || !gameState.draggedItem) return;
+            
+            // Update drag preview position
+            const preview = document.getElementById('drag-preview');
+            if (preview) {
+                preview.style.left = (e.clientX - 40) + 'px';
+                preview.style.top = (e.clientY - 30) + 'px';
+            }
+            
+            // Check if over valid drop zone
+            updateDropZoneHighlight(e.clientX, e.clientY);
+        }
+
+        function handleDragEnd(e) {
+            if (!gameState.isDragging || !gameState.draggedItem) return;
+            
+            // Remove drag preview
+            const preview = document.getElementById('drag-preview');
+            if (preview) {
+                preview.remove();
+            }
+            
+            // Check if dropped on valid location
+            const dropResult = checkDropLocation(e.clientX, e.clientY);
+            
+            if (dropResult.valid) {
+                // Place item on grid
+                placeItemOnGrid(gameState.draggedItem, dropResult.gridX, dropResult.gridY);
+            } else {
+                // Return to bank (item stays in bank)
+                console.log('Invalid drop location - item stays in bank');
+            }
+            
+            // Clean up
+            cleanupDrag();
+        }
+
+        function cleanupDrag() {
+            // Remove event listeners
+            document.removeEventListener('mousemove', handleDragMove);
+            document.removeEventListener('mouseup', handleDragEnd);
+            
+            // Reset cursor
+            document.body.style.cursor = 'default';
+            
+            // Hide drop zone highlights
+            highlightDropZones(false);
+            
+            // Reset drag state
+            gameState.draggedItem = null;
+            gameState.isDragging = false;
+        }
+
+        function checkDropLocation(clientX, clientY) {
+            // Get canvas bounds
+            const canvas = document.querySelector('canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Check if over canvas
+            if (clientX < canvasRect.left || clientX > canvasRect.right ||
+                clientY < canvasRect.top || clientY > canvasRect.bottom) {
+                return { valid: false };
+            }
+            
+            // Convert to canvas coordinates
+            const canvasX = clientX - canvasRect.left;
+            const canvasY = clientY - canvasRect.top;
+            
+            // Convert to grid coordinates
+            const gridPos = worldToGrid(canvasX, canvasY);
+            
+            // Check if it's a valid gap position
+            const isGap = gameState.gaps.some(gap => 
+                gap.x === gridPos.x && gap.y === gridPos.y && !gap.filled
+            );
+            
+            if (isGap && isGridPositionEmpty(gridPos.x, gridPos.y)) {
+                return { valid: true, gridX: gridPos.x, gridY: gridPos.y };
+            }
+            
+            return { valid: false };
+        }
+
+        function highlightDropZones(show) {
+            gameState.gaps.forEach(gap => {
+                if (!gap.filled && gap.sprite) {
+                    const graphics = gap.sprite.getChildren()[0]; // Get the graphics object
+                    const pos = gridToWorld(gap.x, gap.y);
+                    const x = pos.x - 25;
+                    const y = pos.y - 15;
+                    const width = 50;
+                    const height = 30;
+                    
+                    graphics.clear();
+                    
+                    if (show) {
+                        // Show solid green highlight
+                        graphics.lineStyle(3, 0x4CAF50, 1.0);
+                        graphics.strokeRect(x, y, width, height);
+                    } else {
+                        // Show dashed red outline
+                        graphics.lineStyle(2, 0xFF6B6B, 0.8);
+                        
+                        const dashLength = 5;
+                        const gapLength = 5;
+                        
+                        // Top line
+                        for (let i = 0; i < width; i += dashLength + gapLength) {
+                            const lineWidth = Math.min(dashLength, width - i);
+                            graphics.moveTo(x + i, y);
+                            graphics.lineTo(x + i + lineWidth, y);
+                        }
+                        
+                        // Bottom line
+                        for (let i = 0; i < width; i += dashLength + gapLength) {
+                            const lineWidth = Math.min(dashLength, width - i);
+                            graphics.moveTo(x + i, y + height);
+                            graphics.lineTo(x + i + lineWidth, y + height);
+                        }
+                        
+                        // Left line
+                        for (let i = 0; i < height; i += dashLength + gapLength) {
+                            const lineHeight = Math.min(dashLength, height - i);
+                            graphics.moveTo(x, y + i);
+                            graphics.lineTo(x, y + i + lineHeight);
+                        }
+                        
+                        // Right line
+                        for (let i = 0; i < height; i += dashLength + gapLength) {
+                            const lineHeight = Math.min(dashLength, height - i);
+                            graphics.moveTo(x + width, y + i);
+                            graphics.lineTo(x + width, y + i + lineHeight);
+                        }
+                        
+                        graphics.strokePath();
+                    }
+                }
+            });
+        }
+
+        function updateDropZoneHighlight(clientX, clientY) {
+            const dropResult = checkDropLocation(clientX, clientY);
+            
+            // Update cursor based on drop validity
+            if (dropResult.valid) {
+                document.body.style.cursor = 'copy';
+            } else {
+                document.body.style.cursor = 'not-allowed';
+            }
+        }
+
+        function setupCanvasDropZone() {
+            const canvas = document.querySelector('canvas');
+            
+            canvas.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            canvas.addEventListener('drop', function(e) {
+                e.preventDefault();
+                // Drag and drop is handled by mouse events
+            });
+        }
+
+        function setupPlacedItemInteraction() {
+            // Set up click handling for placed items (for removal)
+            scene.input.on('gameobjectdown', function(pointer, gameObject) {
+                // Find the item that was clicked
+                const clickedItem = gameState.itemBank.find(item => 
+                    item.mainSprite === gameObject
+                );
+                
+                if (clickedItem && clickedItem.placed && !clickedItem.isDragging) {
+                    // Only handle click removal if not dragging
+                    // Return item to bank
+                    returnItemToBank(clickedItem);
+                    
+                    // Show gap indicator again
+                    const gap = gameState.gaps.find(g => 
+                        g.x === clickedItem.gridX && g.y === clickedItem.gridY
+                    );
+                    if (gap) {
+                        gap.filled = false;
+                        if (gap.sprite) {
+                            gap.sprite.setVisible(true);
+                        }
+                    }
+                    
+                    // Show feedback
+                    showFeedback('Item returned to bank! Click or drag items away to remove them.', 'info');
+                }
+            });
+        }
+
+        // Utility functions
+        function gridToWorld(gridX, gridY) {
+            return {
+                x: gridX * gameState.cellSize + gameState.cellSize / 2,
+                y: gridY * gameState.cellSize + gameState.cellSize / 2
+            };
+        }
+
+        function worldToGrid(worldX, worldY) {
+            return {
+                x: Math.floor(worldX / gameState.cellSize),
+                y: Math.floor(worldY / gameState.cellSize)
+            };
+        }
+
+        function isValidGridPosition(gridX, gridY) {
+            return gridX >= 0 && gridX < gameState.gridWidth && 
+                   gridY >= 0 && gridY < gameState.gridHeight;
+        }
+
+        function isGridPositionEmpty(gridX, gridY) {
+            if (!isValidGridPosition(gridX, gridY)) return false;
+            const gridContent = gameState.grid[gridY][gridX];
+            // Allow placement on empty positions or gap positions
+            return gridContent === null || gridContent === 'gap';
+        }
+
+        function setGridPosition(gridX, gridY, item) {
+            if (isValidGridPosition(gridX, gridY)) {
+                gameState.grid[gridY][gridX] = item;
+            }
+        }
+
+        function getGridPosition(gridX, gridY) {
+            if (isValidGridPosition(gridX, gridY)) {
+                return gameState.grid[gridY][gridX];
+            }
+            return null;
+        }
+
+        // Circuit evaluation functions
+        function evaluateCircuit() {
+            console.log('Evaluating circuit...');
+            
+            // Don't require all gaps to be filled - just check if there's a complete conductive path
+            // This allows testing with partial solutions
+            
+            // Find path from battery positive to battery negative through the bulb
+            const hasCompletePath = findCircuitPath();
+            
+            console.log('Circuit evaluation result:', hasCompletePath);
+            updateLightBulb(hasCompletePath);
+            
+            return hasCompletePath;
+        }
+
+        function findCircuitPath() {
+            // Two-wire circuit: positive terminal -> top wire -> bulb -> bottom wire -> negative terminal
+            
+            // Start from battery positive terminal (top wire)
+            const startX = gameState.battery.x + 1;
+            const startY = gameState.battery.y - 1; // Top wire (y=3)
+            
+            // End at battery negative terminal (bottom wire)  
+            const endX = gameState.battery.x + 1;
+            const endY = gameState.battery.y + 1; // Bottom wire (y=5)
+            
+            // Use breadth-first search to find conductive path
+            const queue = [{x: startX, y: startY, path: []}];
+            const visited = new Set();
+            let bulbVisited = false;
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const key = `${current.x},${current.y}`;
+                
+                // Skip if already visited
+                if (visited.has(key)) continue;
+                visited.add(key);
+                
+                // Check if we reached the end (battery negative terminal via bottom wire)
+                if (current.x === endX && current.y === endY && bulbVisited) {
+                    console.log('Complete circuit found through bulb!');
+                    return true;
+                }
+                
+                // Check if we're at the bulb (either top or bottom connection)
+                if (current.x === gameState.bulb.x && 
+                    (current.y === gameState.bulb.y - 1 || current.y === gameState.bulb.y + 1)) {
+                    bulbVisited = true;
+                    console.log('Path goes through bulb');
+                }
+                
+                // Get adjacent positions
+                const adjacent = [
+                    {x: current.x + 1, y: current.y},
+                    {x: current.x - 1, y: current.y},
+                    {x: current.x, y: current.y + 1},
+                    {x: current.x, y: current.y - 1}
+                ];
+                
+                adjacent.forEach(pos => {
+                    const adjKey = `${pos.x},${pos.y}`;
+                    if (!visited.has(adjKey) && isConductive(pos.x, pos.y)) {
+                        queue.push({
+                            x: pos.x, 
+                            y: pos.y, 
+                            path: [...current.path, {x: current.x, y: current.y}]
+                        });
+                    }
+                });
+            }
+            
+            console.log('No complete circuit found');
+            return false;
+        }
+
+        function isConductive(x, y) {
+            // Check bounds
+            if (!isValidGridPosition(x, y)) {
+                return false;
+            }
+            
+            const gridItem = getGridPosition(x, y);
+            
+            // Empty positions are not conductive
+            if (gridItem === null) {
+                return false;
+            }
+            
+            // Check different component types
+            if (gridItem === 'battery' || gridItem === 'bulb' || gridItem === 'wire') {
+                return true;
+            }
+            
+            // Check placed items
+            if (typeof gridItem === 'object' && gridItem.conductive !== undefined) {
+                return gridItem.conductive;
+            }
+            
+            // Default to non-conductive
+            return false;
+        }
+
+        function visualizeCurrentFlow(hasFlow) {
+            // Remove existing flow visualization
+            if (gameState.flowVisualization) {
+                gameState.flowVisualization.forEach(particle => {
+                    if (particle.destroy) particle.destroy();
+                });
+                gameState.flowVisualization = [];
+            }
+            
+            if (!hasFlow) return;
+            
+            // Create flowing particles along the actual circuit path
+            gameState.flowVisualization = [];
+            
+            // Find the actual conductive path and animate along it
+            const circuitPath = getActualCircuitPath();
+            
+            if (circuitPath.length > 0) {
+                // Create continuous flowing particles
+                for (let wave = 0; wave < 5; wave++) {
+                    circuitPath.forEach((pos, index) => {
+                        setTimeout(() => {
+                            if (gameState.bulb.isLit) { // Only show if bulb is still lit
+                                const worldPos = gridToWorld(pos.x, pos.y);
+                                
+                                // Create main particle (electron)
+                                const particle = scene.add.circle(worldPos.x, worldPos.y, 3, 0xFFFF00);
+                                particle.setAlpha(1.0);
+                                
+                                // Create trail effect
+                                const trail = scene.add.circle(worldPos.x, worldPos.y, 6, 0xFFFF00);
+                                trail.setAlpha(0.4);
+                                
+                                // Animate particle movement
+                                scene.tweens.add({
+                                    targets: particle,
+                                    alpha: 0,
+                                    duration: 800,
+                                    ease: 'Power2',
+                                    onComplete: () => {
+                                        particle.destroy();
+                                    }
+                                });
+                                
+                                scene.tweens.add({
+                                    targets: trail,
+                                    alpha: 0,
+                                    scale: 2,
+                                    duration: 1000,
+                                    ease: 'Power2',
+                                    onComplete: () => {
+                                        trail.destroy();
+                                    }
+                                });
+                                
+                                gameState.flowVisualization.push(particle, trail);
+                            }
+                        }, (wave * 600) + (index * 100));
+                    });
+                }
+            }
+        }
+
+        function getActualCircuitPath() {
+            // Return the path from positive terminal through both wires to negative terminal
+            const path = [];
+            
+            // Top wire (positive path) - from battery to bulb
+            const topY = gameState.battery.y - 1; // Row 3
+            for (let x = gameState.battery.x + 1; x <= gameState.bulb.x; x++) {
+                if (isConductive(x, topY)) {
+                    path.push({x: x, y: topY});
+                }
+            }
+            
+            // Through the bulb (if both connections are conductive)
+            if (isConductive(gameState.bulb.x, topY) && isConductive(gameState.bulb.x, gameState.battery.y + 1)) {
+                path.push({x: gameState.bulb.x, y: gameState.bulb.y}); // Bulb center
+            }
+            
+            // Bottom wire (negative path) - from bulb back to battery
+            const bottomY = gameState.battery.y + 1; // Row 5
+            for (let x = gameState.bulb.x; x >= gameState.battery.x + 1; x--) {
+                if (isConductive(x, bottomY)) {
+                    path.push({x: x, y: bottomY});
+                }
+            }
+            
+            return path;
+        }
+
+        function getCircuitAnalysis() {
+            const analysis = {
+                gapsFilled: 0,
+                totalGaps: gameState.gaps.length,
+                conductorsPlaced: 0,
+                insulatorsPlaced: 0,
+                placedItems: []
+            };
+            
+            gameState.gaps.forEach(gap => {
+                if (gap.filled) {
+                    analysis.gapsFilled++;
+                    const item = getGridPosition(gap.x, gap.y);
+                    if (item && typeof item === 'object') {
+                        analysis.placedItems.push({
+                            name: item.name,
+                            type: item.type,
+                            conductive: item.conductive,
+                            position: {x: gap.x, y: gap.y}
+                        });
+                        
+                        if (item.conductive) {
+                            analysis.conductorsPlaced++;
+                        } else {
+                            analysis.insulatorsPlaced++;
+                        }
+                    }
+                }
+            });
+            
+            return analysis;
+        }
+
+        function showFeedback(message, type = 'info') {
+            const feedbackArea = document.getElementById('feedback-area');
+            feedbackArea.textContent = message;
+            feedbackArea.className = `feedback-${type}`;
+            
+            // Add pulse animation for important feedback
+            if (type === 'success' || type === 'error') {
+                feedbackArea.style.animation = 'pulse 0.5s ease-in-out';
+                setTimeout(() => {
+                    feedbackArea.style.animation = '';
+                }, 500);
+            }
+        }
+
+        // Button event handlers
+        document.getElementById('test-circuit-btn').addEventListener('click', function() {
+            console.log('Testing circuit...');
+            
+            // Disable button during testing
+            this.disabled = true;
+            this.textContent = '⚡ Testing...';
+            
+            const analysis = getCircuitAnalysis();
+            console.log('Circuit analysis:', analysis);
+            
+            setTimeout(() => {
+                const isComplete = evaluateCircuit();
+                
+                if (isComplete) {
+                    showFeedback('🎉 Circuit Complete! Electricity is flowing!', 'success');
+                    
+                    // Show current flow animation
+                    visualizeCurrentFlow(true);
+                    
+                    // Show success modal after animation
+                    setTimeout(() => {
+                        showSuccessModal();
+                    }, 1500);
+                } else {
+                    // Provide specific feedback about why circuit failed
+                    let message = '';
+                    if (analysis.gapsFilled === 0) {
+                        message = '❌ No materials placed. Drag materials to the gaps!';
+                    } else if (analysis.gapsFilled < analysis.totalGaps) {
+                        message = `❌ Try filling more gaps to complete the circuit.`;
+                    } else {
+                        message = '❌ Some materials are blocking electricity. Try different materials.';
+                    }
+                    showFeedback(message, 'error');
+                }
+                
+                // Re-enable button
+                this.disabled = false;
+                this.textContent = '⚡ Test Circuit';
+            }, 500); // Small delay for better UX
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', function() {
+            console.log('Reset button clicked - functionality will be added later');
+        });
+
+        function showSuccessModal() {
+            // Get analysis of what materials were used
+            const analysis = getCircuitAnalysis();
+            
+            // Populate materials used section with enhanced educational content
+            const materialsDiv = document.getElementById('materials-used');
+            let materialsHTML = '<h4>🔧 Materials You Used:</h4>';
+            
+            if (analysis.placedItems.length > 0) {
+                materialsHTML += '<ul>';
+                analysis.placedItems.forEach(item => {
+                    const conductorClass = item.conductive ? 'conductor-text' : 'insulator-text';
+                    const conductorType = item.conductive ? 'CONDUCTOR' : 'INSULATOR';
+                    const explanation = item.conductive ? 
+                        'allows electricity to flow through it easily!' : 
+                        'blocks electricity from flowing through it.';
+                    
+                    materialsHTML += `<li><strong>${item.name}</strong> - <span class="${conductorClass}">${conductorType}</span> that ${explanation}</li>`;
+                });
+                materialsHTML += '</ul>';
+                
+                if (analysis.conductorsPlaced > 0) {
+                    materialsHTML += `<p><strong>🎯 Perfect!</strong> You used <span class="conductor-text">${analysis.conductorsPlaced} conductor(s)</span> to complete the electrical circuit!</p>`;
+                }
+                
+                // Add educational explanation
+                materialsHTML += `<p><strong>💡 What you learned:</strong> Conductors like metals allow electricity to flow, while insulators like rubber and wood block it. That's why the light bulb glows when you use conductive materials!</p>`;
+            } else {
+                materialsHTML += '<p>No materials were needed - the circuit was already complete!</p>';
+            }
+            
+            materialsDiv.innerHTML = materialsHTML;
+            
+            // Add celebration visual effects
+            addCelebrationEffects();
+            
+            // Show modal with animation
+            const modal = document.getElementById('success-modal');
+            modal.style.display = 'block';
+            
+            // Add pulse animation to the modal content
+            const modalContent = document.getElementById('success-content');
+            modalContent.style.animation = 'pulse 0.6s ease-in-out';
+            
+            // Add confetti effect to the page background
+            setTimeout(() => {
+                createConfettiEffect();
+            }, 200);
+            
+            // Play success sound effect (if available)
+            playSuccessSound();
+        }
+
+        function addCelebrationEffects() {
+            // Create sparkle particles around the light bulb
+            if (gameState.bulb.sprite && gameState.bulb.isLit) {
+                const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+                
+                // Create multiple sparkle particles
+                for (let i = 0; i < 12; i++) {
+                    setTimeout(() => {
+                        const angle = (i / 12) * Math.PI * 2;
+                        const distance = 40 + Math.random() * 20;
+                        const sparkleX = bulbPos.x + Math.cos(angle) * distance;
+                        const sparkleY = bulbPos.y + Math.sin(angle) * distance;
+                        
+                        const sparkle = scene.add.star(sparkleX, sparkleY, 5, 4, 8, 0xFFD700);
+                        sparkle.setAlpha(1);
+                        
+                        // Animate sparkle
+                        scene.tweens.add({
+                            targets: sparkle,
+                            scaleX: 0,
+                            scaleY: 0,
+                            alpha: 0,
+                            rotation: Math.PI * 2,
+                            duration: 1000,
+                            ease: 'Power2',
+                            onComplete: () => sparkle.destroy()
+                        });
+                    }, i * 100);
+                }
+            }
+            
+            // Add screen flash effect
+            const flash = scene.add.rectangle(
+                gameState.gridWidth * gameState.cellSize / 2,
+                gameState.gridHeight * gameState.cellSize / 2,
+                gameState.gridWidth * gameState.cellSize,
+                gameState.gridHeight * gameState.cellSize,
+                0xFFFFFF
+            );
+            flash.setAlpha(0.6);
+            
+            scene.tweens.add({
+                targets: flash,
+                alpha: 0,
+                duration: 300,
+                ease: 'Power2',
+                onComplete: () => flash.destroy()
+            });
+        }
+        
+        function playSuccessSound() {
+            // Create a simple success sound using Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create a simple success melody
+                const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
+                
+                frequencies.forEach((freq, index) => {
+                    setTimeout(() => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 0.3);
+                    }, index * 150);
+                });
+            } catch (error) {
+                console.log('Audio not available:', error);
+            }
+        }
+
+        document.getElementById('play-again-btn').addEventListener('click', function() {
+            hideSuccessModal();
+            resetGame();
+        });
+
+        // Add event listener for new challenge button
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('new-challenge-btn').addEventListener('click', function() {
+                hideSuccessModal();
+                createNewChallenge();
+            });
+            
+            // Add click outside modal to close
+            document.getElementById('success-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideSuccessModal();
+                }
+            });
+            
+            // Add escape key to close modal
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('success-modal').style.display === 'block') {
+                    hideSuccessModal();
+                }
+            });
+        });
+        
+        function createConfettiEffect() {
+            // Create colorful confetti particles that fall from the top
+            const colors = [0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0xFFA07A, 0x98D8C8, 0xF7DC6F];
+            
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * (gameState.gridWidth * gameState.cellSize);
+                    const y = -20;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    const confetti = scene.add.rectangle(x, y, 8, 8, color);
+                    confetti.setRotation(Math.random() * Math.PI * 2);
+                    
+                    // Animate falling confetti
+                    scene.tweens.add({
+                        targets: confetti,
+                        y: gameState.gridHeight * gameState.cellSize + 50,
+                        rotation: confetti.rotation + Math.PI * 4,
+                        duration: 2000 + Math.random() * 1000,
+                        ease: 'Power2',
+                        onComplete: () => confetti.destroy()
+                    });
+                    
+                    // Add side-to-side motion
+                    scene.tweens.add({
+                        targets: confetti,
+                        x: x + (Math.random() - 0.5) * 100,
+                        duration: 2000 + Math.random() * 1000,
+                        ease: 'Sine.easeInOut',
+                        yoyo: true,
+                        repeat: 1
+                    });
+                }, i * 100);
+            }
+        }
+        
+        function hideSuccessModal() {
+            const modal = document.getElementById('success-modal');
+            const modalContent = document.getElementById('success-content');
+            
+            // Add fade out animation
+            modalContent.style.animation = 'slideOut 0.3s ease-in';
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modalContent.style.animation = ''; // Reset animation
+            }, 300);
+        }
+
+        function createNewChallenge() {
+            // Reset the current game first
+            resetGame();
+            
+            // Create a variation by changing gap positions slightly
+            const challengeVariations = [
+                // Original pattern
+                [
+                    { x: 3, y: 3 }, { x: 5, y: 3 }, { x: 7, y: 3 },
+                    { x: 7, y: 5 }, { x: 5, y: 5 }, { x: 3, y: 5 }
+                ],
+                // Variation 1: Different gap spacing
+                [
+                    { x: 2, y: 3 }, { x: 4, y: 3 }, { x: 6, y: 3 }, { x: 8, y: 3 },
+                    { x: 8, y: 5 }, { x: 6, y: 5 }, { x: 4, y: 5 }, { x: 2, y: 5 }
+                ],
+                // Variation 2: Fewer gaps (easier)
+                [
+                    { x: 4, y: 3 }, { x: 6, y: 3 },
+                    { x: 6, y: 5 }, { x: 4, y: 5 }
+                ]
+            ];
+            
+            // Select a random variation (excluding current one)
+            const currentPattern = JSON.stringify(gameState.gaps.map(g => ({x: g.x, y: g.y})));
+            const availableVariations = challengeVariations.filter(v => 
+                JSON.stringify(v) !== currentPattern
+            );
+            
+            if (availableVariations.length > 0) {
+                const newPattern = availableVariations[Math.floor(Math.random() * availableVariations.length)];
+                
+                // Clear existing gaps
+                gameState.gaps.forEach(gap => {
+                    if (gap.sprite) {
+                        gap.sprite.destroy();
+                    }
+                });
+                
+                // Create new gap pattern
+                gameState.gaps = newPattern.map(pos => ({
+                    x: pos.x,
+                    y: pos.y,
+                    filled: false,
+                    sprite: null
+                }));
+                
+                // Recreate gap visuals
+                markGaps();
+                
+                // Show challenge message
+                const challengeMessages = [
+                    '🆕 New Challenge! Different gap pattern - try it out!',
+                    '⚡ Fresh Circuit! Can you solve this new layout?',
+                    '🎯 Challenge Mode! New gaps to fill with conductors!'
+                ];
+                
+                const randomMessage = challengeMessages[Math.floor(Math.random() * challengeMessages.length)];
+                showFeedback(randomMessage, 'info');
+                
+                console.log('New challenge created with different gap pattern');
+            } else {
+                // Fallback to original reset with encouraging message
+                showFeedback('🔄 Try the same circuit with different materials!', 'info');
+                console.log('New challenge created - same pattern, try different materials');
+            }
+        }
+
+        function resetGame() {
+            // Return all placed items to bank
+            gameState.itemBank.forEach(item => {
+                if (item.placed) {
+                    returnItemToBank(item);
+                }
+            });
+            
+            // Reset all gaps
+            gameState.gaps.forEach(gap => {
+                gap.filled = false;
+                if (gap.sprite) {
+                    gap.sprite.setVisible(true);
+                }
+            });
+            
+            // Turn off light bulb
+            updateLightBulb(false);
+            
+            // Clear flow visualization
+            if (gameState.flowVisualization) {
+                gameState.flowVisualization.forEach(particle => {
+                    if (particle.destroy) particle.destroy();
+                });
+                gameState.flowVisualization = [];
+            }
+            
+            // Reset feedback
+            showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Click or drag placed items away to remove them.', 'info');
+            
+            console.log('Game reset');
+        }
+
+        document.getElementById('reset-btn').addEventListener('click', function() {
+            resetGame();
+        });
+
+        // Start the game
+        game = new Phaser.Game(config);
+    </script>
+</body>
+</html>
