@@ -465,7 +465,8 @@
                 { x: 2, y: 5 }  // To battery negative
             ],
             draggedItem: null,
-            isDragging: false
+            isDragging: false,
+            connectionGraphics: [] // Store connection graphics for cleanup
         };
 
         function preload() {
@@ -490,6 +491,9 @@
             
             // Set up input handling
             setupInputHandling();
+            
+            // Initialize wire connections
+            updateWireConnections();
         }
 
         function update() {
@@ -1264,6 +1268,12 @@
                 }, 1000);
             }
             
+            // Update wire connections when item is removed
+            updateWireConnections();
+            
+            // Stop current flow animation since circuit is now incomplete
+            visualizeCurrentFlow(false);
+            
             console.log('Item successfully returned to bank');
         }
 
@@ -1293,6 +1303,9 @@
                     gap.sprite.setVisible(false);
                 }
             }
+            
+            // Update wire connections when item is placed
+            updateWireConnections();
         }
 
         function setupInputHandling() {
@@ -1646,6 +1659,9 @@
             console.log('Circuit evaluation result:', hasCompletePath);
             updateLightBulb(hasCompletePath);
             
+            // Update wire connections to show the complete circuit path
+            updateWireConnections();
+            
             return hasCompletePath;
         }
 
@@ -1768,68 +1784,512 @@
             return false;
         }
 
+        // Visual Connection System Functions
+        function updateWireConnections() {
+            console.log('Updating wire connections...');
+            
+            // Clear existing connection graphics
+            clearConnectionGraphics();
+            
+            // Draw connections from battery terminals
+            drawBatteryConnections();
+            
+            // Draw connections to bulb terminals
+            drawBulbConnections();
+            
+            // For each placed conductive item, draw connections to adjacent components
+            gameState.itemBank.forEach(item => {
+                if (item.placed && item.conductive) {
+                    drawConnectionsForItem(item);
+                }
+            });
+            
+            // Draw connections between pre-placed wires and adjacent components
+            gameState.preplacedWires.forEach(wire => {
+                drawConnectionsForWire(wire);
+            });
+            
+            // If circuit is complete, draw the continuous path (without animation - handled by visualizeCurrentFlow)
+            if (gameState.bulb.isLit) {
+                drawContinuousPathOnly();
+            }
+            
+            console.log('Wire connections updated');
+        }
+
+        function clearConnectionGraphics() {
+            // Destroy all existing connection graphics
+            gameState.connectionGraphics.forEach(graphic => {
+                if (graphic && graphic.destroy) {
+                    graphic.destroy();
+                }
+            });
+            gameState.connectionGraphics = [];
+        }
+
+        function drawBatteryConnections() {
+            const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            
+            // Draw connection from battery positive terminal to top wire
+            const topWirePos = gridToWorld(gameState.battery.x + 1, gameState.battery.y - 1);
+            if (isConductive(gameState.battery.x + 1, gameState.battery.y - 1)) {
+                drawWireConnection(
+                    { x: batteryPos.x + 25, y: batteryPos.y - 15 }, // Battery positive terminal
+                    topWirePos,
+                    0xCD7F32, // Copper color
+                    4
+                );
+            }
+            
+            // Draw connection from battery negative terminal to bottom wire
+            const bottomWirePos = gridToWorld(gameState.battery.x + 1, gameState.battery.y + 1);
+            if (isConductive(gameState.battery.x + 1, gameState.battery.y + 1)) {
+                drawWireConnection(
+                    { x: batteryPos.x + 25, y: batteryPos.y + 15 }, // Battery negative terminal
+                    bottomWirePos,
+                    0xCD7F32, // Copper color
+                    4
+                );
+            }
+        }
+
+        function drawBulbConnections() {
+            const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+            
+            // Draw connection from top wire to bulb top terminal
+            const topWirePos = gridToWorld(gameState.bulb.x - 1, gameState.bulb.y - 1);
+            if (isConductive(gameState.bulb.x - 1, gameState.bulb.y - 1)) {
+                drawWireConnection(
+                    topWirePos,
+                    { x: bulbPos.x - 15, y: bulbPos.y - 15 }, // Bulb top terminal
+                    0xCD7F32, // Copper color
+                    4
+                );
+            }
+            
+            // Draw connection from bulb bottom terminal to bottom wire
+            const bottomWirePos = gridToWorld(gameState.bulb.x - 1, gameState.bulb.y + 1);
+            if (isConductive(gameState.bulb.x - 1, gameState.bulb.y + 1)) {
+                drawWireConnection(
+                    { x: bulbPos.x - 15, y: bulbPos.y + 15 }, // Bulb bottom terminal
+                    bottomWirePos,
+                    0xCD7F32, // Copper color
+                    4
+                );
+            }
+        }
+
+        function drawConnectionsForItem(item) {
+            if (!item.placed || !item.conductive) return;
+            
+            const itemPos = gridToWorld(item.gridX, item.gridY);
+            const adjacentPositions = getAdjacentPositions(item.gridX, item.gridY);
+            
+            adjacentPositions.forEach(pos => {
+                if (isConductive(pos.x, pos.y)) {
+                    const adjacentPos = gridToWorld(pos.x, pos.y);
+                    drawWireConnection(itemPos, adjacentPos, 0xCD7F32, 3);
+                }
+            });
+        }
+
+        function drawConnectionsForWire(wire) {
+            const wirePos = gridToWorld(wire.x, wire.y);
+            const adjacentPositions = getAdjacentPositions(wire.x, wire.y);
+            
+            adjacentPositions.forEach(pos => {
+                if (isConductive(pos.x, pos.y)) {
+                    const adjacentPos = gridToWorld(pos.x, pos.y);
+                    // Only draw if it's not another pre-placed wire (to avoid duplicate lines)
+                    const adjacentContent = getGridPosition(pos.x, pos.y);
+                    if (adjacentContent !== 'wire') {
+                        drawWireConnection(wirePos, adjacentPos, 0xCD7F32, 3);
+                    }
+                }
+            });
+        }
+
+        function drawWireConnection(fromPos, toPos, color, lineWidth) {
+            const graphics = scene.add.graphics();
+            graphics.lineStyle(lineWidth, color, 0.8);
+            
+            // Draw connecting wire with proper endpoints
+            graphics.moveTo(fromPos.x, fromPos.y);
+            graphics.lineTo(toPos.x, toPos.y);
+            graphics.strokePath();
+            
+            // Add subtle glow effect for active connections
+            if (gameState.bulb.isLit) {
+                const glowGraphics = scene.add.graphics();
+                glowGraphics.lineStyle(lineWidth + 2, color, 0.3);
+                glowGraphics.moveTo(fromPos.x, fromPos.y);
+                glowGraphics.lineTo(toPos.x, toPos.y);
+                glowGraphics.strokePath();
+                glowGraphics.setDepth(-1);
+                gameState.connectionGraphics.push(glowGraphics);
+            }
+            
+            // Store reference for cleanup
+            gameState.connectionGraphics.push(graphics);
+        }
+
+        function getAdjacentPositions(gridX, gridY) {
+            const positions = [];
+            
+            // Check all 4 adjacent positions (up, down, left, right)
+            const directions = [
+                { x: 0, y: -1 }, // Up
+                { x: 0, y: 1 },  // Down
+                { x: -1, y: 0 }, // Left
+                { x: 1, y: 0 }   // Right
+            ];
+            
+            directions.forEach(dir => {
+                const newX = gridX + dir.x;
+                const newY = gridY + dir.y;
+                
+                if (isValidGridPosition(newX, newY)) {
+                    positions.push({ x: newX, y: newY });
+                }
+            });
+            
+            return positions;
+        }
+
+        function drawContinuousPathOnly() {
+            // Draw the complete electrical path when circuit is active (without animation)
+            if (!gameState.bulb.isLit) return;
+            
+            console.log('Drawing continuous electrical path...');
+            
+            // Create a special graphics object for the complete path
+            const pathGraphics = scene.add.graphics();
+            pathGraphics.lineStyle(6, 0xFFD700, 0.6); // Golden color for active path
+            pathGraphics.setDepth(10); // Above other connections
+            
+            // Draw the complete circuit path
+            const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+            
+            // Start from battery positive terminal
+            pathGraphics.moveTo(batteryPos.x + 25, batteryPos.y - 15);
+            
+            // Trace through top wire to bulb
+            for (let x = gameState.battery.x + 1; x < gameState.bulb.x; x++) {
+                if (isConductive(x, gameState.battery.y - 1)) {
+                    const pos = gridToWorld(x, gameState.battery.y - 1);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect to bulb top terminal
+            pathGraphics.lineTo(bulbPos.x - 15, bulbPos.y - 15);
+            
+            // Through bulb to bottom terminal
+            pathGraphics.lineTo(bulbPos.x - 15, bulbPos.y + 15);
+            
+            // Trace through bottom wire back to battery
+            for (let x = gameState.bulb.x - 1; x > gameState.battery.x; x--) {
+                if (isConductive(x, gameState.battery.y + 1)) {
+                    const pos = gridToWorld(x, gameState.battery.y + 1);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // End at battery negative terminal
+            pathGraphics.lineTo(batteryPos.x + 25, batteryPos.y + 15);
+            
+            pathGraphics.strokePath();
+            
+            // Store for cleanup
+            gameState.connectionGraphics.push(pathGraphics);
+        }
+
+
+
         function visualizeCurrentFlow(hasFlow) {
+            console.log('visualizeCurrentFlow called with hasFlow:', hasFlow);
+            console.log('gameState.bulb.isLit:', gameState.bulb.isLit);
+            console.log('scene available:', !!scene);
+            
             // Remove existing flow visualization
             if (gameState.flowVisualization) {
+                console.log('Cleaning up existing flow visualization, count:', gameState.flowVisualization.length);
                 gameState.flowVisualization.forEach(particle => {
+                    // Clean up animation timers
+                    if (particle.animationTimer) {
+                        particle.animationTimer.destroy();
+                    }
                     if (particle.destroy) particle.destroy();
                 });
                 gameState.flowVisualization = [];
             }
             
-            if (!hasFlow) return;
+            if (!hasFlow) {
+                console.log('hasFlow is false, stopping animation');
+                return;
+            }
             
-            // Create flowing particles along the actual circuit path
+            if (!gameState.bulb.isLit) {
+                console.log('Bulb is not lit, not starting animation');
+                return;
+            }
+            
+            // Create a chain of synchronized pulsating particles
             gameState.flowVisualization = [];
             
-            // Find the actual conductive path and animate along it
-            const circuitPath = getActualCircuitPath();
+            console.log('Starting synchronized chain of pulsating particles...');
             
-            if (circuitPath.length > 0) {
-                // Create continuous flowing particles
-                for (let wave = 0; wave < 5; wave++) {
-                    circuitPath.forEach((pos, index) => {
-                        setTimeout(() => {
-                            if (gameState.bulb.isLit) { // Only show if bulb is still lit
-                                const worldPos = gridToWorld(pos.x, pos.y);
-                                
-                                // Create main particle (electron)
-                                const particle = scene.add.circle(worldPos.x, worldPos.y, 3, 0xFFFF00);
-                                particle.setAlpha(1.0);
-                                
-                                // Create trail effect
-                                const trail = scene.add.circle(worldPos.x, worldPos.y, 6, 0xFFFF00);
-                                trail.setAlpha(0.4);
-                                
-                                // Animate particle movement
-                                scene.tweens.add({
-                                    targets: particle,
-                                    alpha: 0,
-                                    duration: 800,
-                                    ease: 'Power2',
-                                    onComplete: () => {
-                                        particle.destroy();
-                                    }
-                                });
-                                
-                                scene.tweens.add({
-                                    targets: trail,
-                                    alpha: 0,
-                                    scale: 2,
-                                    duration: 1000,
-                                    ease: 'Power2',
-                                    onComplete: () => {
-                                        trail.destroy();
-                                    }
-                                });
-                                
-                                gameState.flowVisualization.push(particle, trail);
-                            }
-                        }, (wave * 600) + (index * 100));
-                    });
+            // Build the complete circuit path
+            const circuitPath = buildCompleteCircuitPath();
+            console.log('Circuit path:', circuitPath);
+            
+            if (circuitPath.length === 0) {
+                console.log('No valid circuit path found');
+                return;
+            }
+            
+            // Calculate particle count based on circuit path length
+            const pathLength = circuitPath.length;
+            const particleCount = Math.max(3, Math.floor(pathLength / 3)); // One particle every 3 path points, minimum 3
+            
+            console.log(`Circuit path length: ${pathLength}, Particle count: ${particleCount}`);
+            
+            const particles = [];
+            
+            // Create particles at evenly spaced positions along the path
+            for (let i = 0; i < particleCount; i++) {
+                // Calculate evenly spaced starting positions to maintain consistent distance
+                const startIndex = Math.floor((i / particleCount) * pathLength);
+                const startPosition = circuitPath[startIndex];
+                
+                console.log(`Creating particle ${i} at path index ${startIndex}, position:`, startPosition);
+                
+                // Create yellow particle
+                const particle = scene.add.circle(startPosition.x, startPosition.y, 6, 0xFFFF00);
+                particle.setAlpha(1.0);
+                particle.setDepth(25);
+                
+                // Create yellow glow effect
+                const glow = scene.add.circle(startPosition.x, startPosition.y, 12, 0xFFFF00);
+                glow.setAlpha(0.4);
+                glow.setDepth(24);
+                
+                particles.push({ 
+                    particle, 
+                    glow, 
+                    startIndex: startIndex,
+                    particleIndex: i 
+                });
+                gameState.flowVisualization.push(particle, glow);
+                
+                console.log(`Particle ${i} created successfully at evenly spaced position`);
+            }
+            
+            console.log(`Created ${particles.length} particles in chain`);
+            
+            // Start synchronized pulsating animation
+            startPulsatingChainAnimation(particles, circuitPath);
+        }
+
+        function buildCompleteCircuitPath() {
+            const path = [];
+            const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+            
+            console.log('Building circuit path...');
+            console.log('Battery position:', batteryPos);
+            console.log('Bulb position:', bulbPos);
+            
+            // Start at battery positive terminal
+            path.push({ x: batteryPos.x + 25, y: batteryPos.y - 15, isTerminal: true });
+            
+            // Top wire (positive path) from battery to bulb
+            for (let x = gameState.battery.x + 1; x < gameState.bulb.x; x++) {
+                if (isConductive(x, gameState.battery.y - 1)) {
+                    const pos = gridToWorld(x, gameState.battery.y - 1);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                    console.log(`Added top wire position: (${pos.x}, ${pos.y})`);
                 }
             }
+            
+            // Bulb top terminal
+            path.push({ x: bulbPos.x - 15, y: bulbPos.y - 15, isBulb: true });
+            
+            // Through bulb
+            path.push({ x: bulbPos.x - 15, y: bulbPos.y, isBulb: true });
+            path.push({ x: bulbPos.x - 15, y: bulbPos.y + 15, isBulb: true });
+            
+            // Bottom wire (negative path) from bulb back to battery
+            for (let x = gameState.bulb.x - 1; x > gameState.battery.x; x--) {
+                if (isConductive(x, gameState.battery.y + 1)) {
+                    const pos = gridToWorld(x, gameState.battery.y + 1);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                    console.log(`Added bottom wire position: (${pos.x}, ${pos.y})`);
+                }
+            }
+            
+            // Battery negative terminal
+            path.push({ x: batteryPos.x + 25, y: batteryPos.y + 15, isTerminal: true });
+            
+            console.log(`Complete circuit path built with ${path.length} points`);
+            return path;
         }
+
+        function calculatePathDistance(path) {
+            let totalDistance = 0;
+            
+            for (let i = 1; i < path.length; i++) {
+                const prev = path[i - 1];
+                const curr = path[i];
+                const distance = Math.sqrt(
+                    Math.pow(curr.x - prev.x, 2) + Math.pow(curr.y - prev.y, 2)
+                );
+                totalDistance += distance;
+            }
+            
+            return totalDistance;
+        }
+
+        function getPositionAtDistance(path, targetDistance) {
+            let currentDistance = 0;
+            
+            for (let i = 1; i < path.length; i++) {
+                const prev = path[i - 1];
+                const curr = path[i];
+                const segmentDistance = Math.sqrt(
+                    Math.pow(curr.x - prev.x, 2) + Math.pow(curr.y - prev.y, 2)
+                );
+                
+                if (currentDistance + segmentDistance >= targetDistance) {
+                    // The target distance is within this segment
+                    const remainingDistance = targetDistance - currentDistance;
+                    const ratio = remainingDistance / segmentDistance;
+                    
+                    return {
+                        x: prev.x + (curr.x - prev.x) * ratio,
+                        y: prev.y + (curr.y - prev.y) * ratio
+                    };
+                }
+                
+                currentDistance += segmentDistance;
+            }
+            
+            // If we've gone past the end, return the last position
+            return path[path.length - 1];
+        }
+
+        function startPulsatingChainAnimation(particles, circuitPath) {
+            console.log(`Starting pulsating animation for ${particles.length} particles`);
+            
+            // Create synchronized pulsating effect for all particles
+            particles.forEach(({ particle, glow }, index) => {
+                console.log(`Setting up pulsing for particle ${index}`);
+                
+                // Pulsating scale animation
+                scene.tweens.add({
+                    targets: [particle, glow],
+                    scaleX: 1.5,
+                    scaleY: 1.5,
+                    duration: 600,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+                
+                // Pulsating alpha animation for extra effect
+                scene.tweens.add({
+                    targets: particle,
+                    alpha: 0.6,
+                    duration: 800,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            });
+            
+            // Start movement animation after a brief delay to see pulsing first
+            setTimeout(() => {
+                console.log('Starting movement animation...');
+                animateLinearMovement(particles, circuitPath);
+            }, 1000);
+        }
+
+        function animateLinearMovement(particles, circuitPath) {
+            if (!gameState.bulb.isLit) return;
+            
+            console.log('Starting circuit flow animation');
+            console.log('Circuit path length:', circuitPath.length);
+            console.log('First few path points:', circuitPath.slice(0, 5));
+            
+            // Now implement proper circuit flow since basic movement works
+            particles.forEach(({ particle, glow }, index) => {
+                console.log(`Starting circuit flow for particle ${index}`);
+                animateParticleAroundCircuit(particle, glow, circuitPath, index);
+            });
+        }
+
+        function animateParticleAroundCircuit(particle, glow, circuitPath, particleIndex) {
+            if (!gameState.bulb.isLit || !particle.active || circuitPath.length === 0) {
+                console.log('Cannot animate - conditions not met');
+                return;
+            }
+            
+            console.log(`Animating particle ${particleIndex} around circuit`);
+            
+            // Find the closest path point to the particle's current position to maintain spacing
+            let currentPathIndex = 0;
+            let minDistance = Infinity;
+            
+            for (let i = 0; i < circuitPath.length; i++) {
+                const pathPoint = circuitPath[i];
+                const distance = Math.sqrt(
+                    Math.pow(particle.x - pathPoint.x, 2) + 
+                    Math.pow(particle.y - pathPoint.y, 2)
+                );
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    currentPathIndex = i;
+                }
+            }
+            
+            console.log(`Particle ${particleIndex} starting from path index ${currentPathIndex}`);
+            
+            const animationSpeed = 300; // milliseconds per path segment
+            
+            const moveToNextPoint = () => {
+                if (!gameState.bulb.isLit || !particle.active) {
+                    console.log('Stopping animation - circuit incomplete');
+                    return;
+                }
+                
+                // Move to next point in circuit (maintaining the circular flow)
+                currentPathIndex = (currentPathIndex + 1) % circuitPath.length;
+                const nextPoint = circuitPath[currentPathIndex];
+                
+                console.log(`Moving particle ${particleIndex} to point ${currentPathIndex}:`, nextPoint);
+                
+                // Animate to next point
+                scene.tweens.add({
+                    targets: [particle, glow],
+                    x: nextPoint.x,
+                    y: nextPoint.y,
+                    duration: animationSpeed,
+                    ease: 'Linear',
+                    onComplete: () => {
+                        // Continue to next point after a small delay
+                        setTimeout(() => {
+                            moveToNextPoint();
+                        }, 50); // Small delay between segments
+                    }
+                });
+            };
+            
+            // Start the animation
+            moveToNextPoint();
+        }
+
+
 
         function getActualCircuitPath() {
             // Return the path from positive terminal through both wires to negative terminal
@@ -1931,6 +2391,9 @@
                         showSuccessModal();
                     }, 1500);
                 } else {
+                    // Stop any current flow animation
+                    visualizeCurrentFlow(false);
+                    
                     // Provide specific feedback about why circuit failed
                     let message = '';
                     if (analysis.gapsFilled === 0) {
@@ -2257,6 +2720,12 @@
                 });
                 gameState.flowVisualization = [];
             }
+            
+            // Clear connection graphics
+            clearConnectionGraphics();
+            
+            // Update wire connections to show base circuit
+            updateWireConnections();
             
             // Reset feedback
             showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.', 'info');
