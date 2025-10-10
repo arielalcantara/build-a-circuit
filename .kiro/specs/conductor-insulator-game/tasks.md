@@ -163,9 +163,88 @@
   - Redraw base circuit with only pre-placed components
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ]* 13. Add educational enhancements and additional features
+- [x] 13. Expand grid size to 15x15 for more complex circuit designs
+  - Update gameState configuration to use 15x15 grid dimensions
+  - Modify canvas size to accommodate larger grid (900x900 pixels)
+  - Reposition battery and bulb components to center of expanded grid
+  - Update circuit layout with more gaps and wire segments for complex designs
+  - Ensure responsive design works with larger grid on different screen sizes
+  - _Requirements: 1.1, 1.5, 10.1, 10.2, 10.3, 10.4, 10.5_
+
+- [x] 14. Fix missing part indicators by removing black overlay and size display
+  - Remove black overlay (sizeIndicator) from gap marking function
+  - Remove size text display from missing part indicators
+  - Remove text labels completely from missing part indicators
+  - Fix positioning of multi-cell gaps to prevent wire overlap
+  - Fix gap positioning consistency during drag operations
+  - Reposition 3x1 missing part indicator to bottom wire path and center it
+  - Improve visual balance by spacing top gaps equally
+  - Update wire layout to accommodate repositioned gaps
+  - Ensure dashed outline remains clear and visible without visual clutter
+  - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8_
+
+- [x] 15. Fix item positioning for multi-cell items (2x1, 3x1)
+  - Correct positioning calculation in createGameSprite function for multi-cell items
+  - Ensure 2x1 and 3x1 items are properly centered within their grid space
+  - Fix overlap issues with pre-existing wires and circuit components
+  - Update gridToWorld positioning to account for item size properly
+  - Improve item label positioning and styling with proper background
+  - Verify electrical connections work correctly for all contact points of multi-cell items
+  - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6_
+
+- [x] 16. Fix item tooltips to show size information and resolve scroll positioning issues
+
+
+
+
+
+  - Implement size information display in tooltip content using the format "Item Name (X cell)" or "Item Name (X cells)"
+  - Update tooltip HTML to display item name and size in parentheses (e.g., "Coin (1 cell)", "Metal Rod (3 cells)", "Copper Wire (2 cells)")
+  - Fix tooltip positioning calculation to use element-relative coordinates instead of viewport coordinates
+  - Implement getBoundingClientRect() or similar method to get accurate item position including scroll offset
+  - Center tooltip horizontally above the item using the item's actual screen position
+  - Ensure tooltip positioning remains accurate when page is scrolled up or down
+  - Change background color to light purple for better visibility
+  - Test tooltip positioning at different scroll positions to verify it stays anchored to the item
+  - Maintain clean, simple tooltip styling with readable formatting
+  - Verify tooltip hide functionality works properly on mouse leave
+  - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 14.9, 14.10_
+
+- [ ] 17. Implement multi-stage system and stage progression
+  - Create stage management system to track current stage
+  - Add stage configuration objects for different circuit layouts
+  - Implement stage switching functionality to load different circuit configurations
+  - Update success modal to include "Next Stage" button for stage progression
+  - Create stage reset functionality that clears current stage without affecting progression
+  - _Requirements: 15.1, 15.2, 17.1, 17.3, 17.4, 17.7_
+
+- [ ] 18. Create Stage 2 circuit layout with parallel paths
+  - Design Stage 2 circuit configuration with battery on left and bulb on right
+  - Position three missing parts: rectangular at top center, square at middle left, rectangular at bottom left
+  - Center the entire Stage 2 circuit layout within the 15x15 grid
+  - Create wire framework showing top path and bottom path connections
+  - Implement proper branching and rejoining wire connections for parallel circuit design
+  - _Requirements: 15.3, 15.4, 15.5, 15.6, 16.1, 16.3, 16.4, 16.5, 16.6_
+
+- [ ] 19. Update circuit evaluation system for parallel paths
+  - Modify circuit evaluation to support multiple parallel paths in Stage 2
+  - Ensure breadth-first search algorithm can find any valid conductive route
+  - Update path finding to handle branching circuits with multiple valid solutions
+  - Maintain same electrical principles (conductors allow flow, insulators block flow)
+  - Test circuit completion when any parallel path provides complete connection
+  - _Requirements: 15.7, 15.8, 17.2, 17.5_
+
+- [ ] 20. Implement visual connection system for parallel circuits
+  - Update wire rendering system to handle branching and rejoining connections
+  - Create dynamic wire connections that show parallel paths clearly
+  - Ensure continuous wire visualization works with multiple circuit branches
+  - Update connection graphics to demonstrate current flow through parallel paths
+  - Maintain visual clarity when showing multiple conductive routes simultaneously
+  - _Requirements: 16.2, 16.7, 16.8_
+
+- [ ]* 21. Add educational enhancements and additional features
   - Include explanatory text about conductors and insulators
   - Add sound effects for interactions and success
-  - Create multiple difficulty levels with different circuit layouts
+  - Create additional difficulty levels with different circuit layouts
   - Add hint system to guide players toward correct solutions
-  - _Requirements: 4.1, 4.2, 4.3, 
+  - _Requirements: 4.1, 4.2, 4.3_ 

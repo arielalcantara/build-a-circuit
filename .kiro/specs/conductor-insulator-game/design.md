@@ -20,18 +20,59 @@ The Conductor-Insulator Game is a web-based educational game built with Phaser.j
 5. **Visual Connection System**: Renders continuous wire connections between components
 6. **UI System**: Handles buttons, modals, and visual feedback
 
+## Grid Expansion Design
+
+### 15x15 Grid Layout
+The expanded grid provides significantly more space for complex circuit designs while maintaining the educational focus:
+
+- **Grid Dimensions**: 15 columns × 15 rows (increased from 12×8)
+- **Canvas Size**: 900px × 900px (15 × 60px cells)
+- **Component Positioning**: Battery and bulb repositioned to center rows for better visual balance
+- **Circuit Complexity**: Support for multiple parallel paths, branching circuits, and creative layouts
+
+### Responsive Design Considerations
+```javascript
+// Adaptive canvas sizing for different screen sizes
+const getOptimalCellSize = () => {
+  const maxWidth = Math.min(window.innerWidth * 0.6, 900);
+  const maxHeight = Math.min(window.innerHeight * 0.7, 900);
+  return Math.min(maxWidth / 15, maxHeight / 15, 60);
+};
+
+// Dynamic grid configuration
+const gameConfig = {
+  width: 15 * cellSize,
+  height: 15 * cellSize,
+  gridWidth: 15,
+  gridHeight: 15
+};
+```
+
+### Enhanced Circuit Layouts
+The larger grid enables:
+- **Multi-path circuits**: Parallel conductors and alternative routes
+- **Complex branching**: Circuits that split and rejoin
+- **Educational scenarios**: More realistic electrical system representations
+- **Creative freedom**: Students can design their own circuit layouts
+
 ## Components and Interfaces
 
 ### Simple Game Objects
 ```javascript
 // Simple object structures instead of classes
 const gameState = {
-  grid: [], // 2D array for grid positions
+  grid: [], // 2D array for grid positions (15x15)
+  gridWidth: 15, // Expanded from 12
+  gridHeight: 15, // Expanded from 8
   itemBank: [], // Available items
   placedItems: [], // Items placed on grid
-  battery: { x: 1, y: 3, type: 'battery' },
-  bulb: { x: 8, y: 3, type: 'bulb', isLit: false },
-  gaps: [{ x: 4, y: 3 }, { x: 6, y: 3 }] // Missing circuit parts
+  battery: { x: 2, y: 7, type: 'battery' }, // Repositioned for center
+  bulb: { x: 12, y: 7, type: 'bulb', isLit: false }, // Repositioned for center
+  gaps: [
+    // More gaps for complex circuits
+    { x: 5, y: 6 }, { x: 7, y: 6 }, { x: 9, y: 6 }, // Top path
+    { x: 9, y: 8 }, { x: 7, y: 8 }, { x: 5, y: 8 }  // Bottom path
+  ]
 };
 
 // Simple functions instead of classes
@@ -286,12 +327,12 @@ function resetItemBankQuantities() {
 │  Game Title                                             │
 ├─────────────────────────────────┬───────────────────────┤
 │                                 │   Item Bank           │
-│         Playing Field           │  ┌─────┬─────┬─────┐  │
-│      (Grid-based Circuit)       │  │ Cu  │ Rb  │ Mt  │  │
+│      Expanded Playing Field     │  ┌─────┬─────┬─────┐  │
+│       (15x15 Grid Circuit)      │  │ Cu  │ Rb  │ Mt  │  │
 │                                 │  └─────┴─────┴─────┘  │
 │  [Battery] ~~~ [Gap] ~~~ [Bulb] │  ┌─────┬─────┬─────┐  │
-│                                 │  │ Wd  │ Al  │ Pl  │  │
-│                                 │  └─────┴─────┴─────┘  │
+│     More space for complex      │  │ Wd  │ Al  │ Pl  │  │
+│      circuit designs            │  └─────┴─────┴─────┘  │
 ├─────────────────────────────────┴───────────────────────┤
 │                    [Test Circuit]                       │
 └─────────────────────────────────────────────────────────┘

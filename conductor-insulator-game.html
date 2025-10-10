@@ -78,9 +78,43 @@
         }
         
         .item-bank-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: start;
+            justify-content: center;
+        }
+        
+        .item-tooltip {
+            position: absolute;
+            background-color: rgba(186, 85, 211, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .item-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(186, 85, 211, 0.95);
         }
         
         .bank-item {
@@ -309,8 +343,8 @@
             100% { transform: scale(1); }
         }
         
-        /* Responsive design */
-        @media (max-width: 1024px) {
+        /* Responsive design for larger 15x15 grid */
+        @media (max-width: 1200px) {
             #game-container {
                 flex-direction: column;
                 align-items: center;
@@ -318,7 +352,7 @@
             
             #right-panel {
                 width: 100%;
-                max-width: 400px;
+                max-width: 500px;
                 align-items: center;
             }
             
@@ -327,7 +361,14 @@
             }
             
             .item-bank-grid {
-                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            #game-canvas {
+                max-width: 90vw;
+                max-height: 90vw;
             }
         }
         
@@ -342,6 +383,11 @@
             
             #game-container {
                 padding: 15px;
+            }
+            
+            #game-canvas {
+                max-width: 95vw;
+                max-height: 95vw;
             }
             
             .controls-row {
@@ -409,11 +455,20 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     
     <script>
+        // Responsive canvas sizing
+        function getOptimalCanvasSize() {
+            const maxWidth = Math.min(window.innerWidth * 0.6, 900);
+            const maxHeight = Math.min(window.innerHeight * 0.7, 900);
+            const size = Math.min(maxWidth, maxHeight);
+            return Math.max(size, 600); // Minimum size of 600px
+        }
+
         // Game configuration
+        const canvasSize = getOptimalCanvasSize();
         const config = {
             type: Phaser.AUTO,
-            width: 720, // 12 cells * 60px
-            height: 480, // 8 cells * 60px
+            width: canvasSize, // Responsive size, max 900px (15 cells * 60px)
+            height: canvasSize, // Responsive size, max 900px (15 cells * 60px)
             parent: 'game-canvas',
             backgroundColor: '#ffffff',
             scene: {
@@ -434,35 +489,42 @@
         let scene;
         let gameState = {
             grid: [],
-            gridWidth: 12,
-            gridHeight: 8,
-            cellSize: 60,
+            gridWidth: 15,
+            gridHeight: 15,
+            cellSize: canvasSize / 15, // Dynamic cell size based on canvas
             itemBank: [],
             placedItems: [],
-            battery: { x: 1, y: 4, sprite: null },
-            bulb: { x: 9, y: 4, sprite: null, isLit: false },
+            battery: { x: 2, y: 7, sprite: null },
+            bulb: { x: 13, y: 7, sprite: null, isLit: false },
             // Two-wire circuit: top wire (positive) and bottom wire (negative)
             gaps: [
-                // Top wire (positive path)
-                { x: 3, y: 3, filled: false },
-                { x: 5, y: 3, filled: false },
-                { x: 7, y: 3, filled: false },
-                // Bottom wire (negative path)
-                { x: 7, y: 5, filled: false },
-                { x: 5, y: 5, filled: false },
-                { x: 3, y: 5, filled: false }
+                // Two missing parts on top wire with equal spacing, one centered on bottom wire
+                { x: 4, y: 6, filled: false, size: { width: 1, height: 1 } },
+                { x: 8, y: 6, filled: false, size: { width: 2, height: 1 } },
+                { x: 6, y: 8, filled: false, size: { width: 3, height: 1 } }
             ],
             preplacedWires: [
-                // Top wire connections
-                { x: 2, y: 3 }, // From battery positive
-                { x: 4, y: 3 },
-                { x: 6, y: 3 },
-                { x: 8, y: 3 }, // To bulb
-                // Bottom wire connections  
-                { x: 8, y: 5 }, // From bulb
-                { x: 6, y: 5 },
-                { x: 4, y: 5 },
-                { x: 2, y: 5 }  // To battery negative
+                // Top wire connections (with gaps: 1x1 at x:4, 2x1 at x:8-9)
+                { x: 3, y: 6 }, // From battery positive
+                // Gap for 1x1 at x:4
+                { x: 5, y: 6 }, // After first gap
+                { x: 6, y: 6 },
+                { x: 7, y: 6 }, // Before second gap
+                // Gap for 2x1 at x:8-9
+                { x: 10, y: 6 }, // After second gap
+                { x: 11, y: 6 },
+                { x: 12, y: 6 },
+                { x: 13, y: 6 }, // To bulb
+                // Bottom wire connections (with gap for 3x1 at x:6-8)
+                { x: 13, y: 8 }, // From bulb
+                { x: 12, y: 8 },
+                { x: 11, y: 8 },
+                { x: 10, y: 8 },
+                { x: 9, y: 8 }, // Before 3x1 gap
+                // Gap for 3x1 at x:6-8
+                { x: 5, y: 8 }, // After 3x1 gap
+                { x: 4, y: 8 },
+                { x: 3, y: 8 }  // To battery negative
             ],
             draggedItem: null,
             isDragging: false,
@@ -535,13 +597,13 @@
             graphics.lineStyle(2, 0x4CAF50, 0.3);
             graphics.fillStyle(0x4CAF50, 0.1);
             
-            // Top wire (row 3)
-            graphics.fillRect(0, 3 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
-            graphics.strokeRect(0, 3 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            // Top wire (row 6)
+            graphics.fillRect(0, 6 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            graphics.strokeRect(0, 6 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
             
-            // Bottom wire (row 5)  
-            graphics.fillRect(0, 5 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
-            graphics.strokeRect(0, 5 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            // Bottom wire (row 8)  
+            graphics.fillRect(0, 8 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            graphics.strokeRect(0, 8 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
         }
 
         function createCircuitComponents() {
@@ -672,15 +734,23 @@
             gameState.gaps.forEach(gap => {
                 const pos = gridToWorld(gap.x, gap.y);
                 
+                // Calculate gap size based on the gap's size property
+                const gapSize = gap.size || { width: 1, height: 1 };
+                const cellSize = gameState.cellSize;
+                
                 // Create gap indicator (dashed outline using multiple small lines)
                 const graphics = scene.add.graphics();
                 graphics.lineStyle(2, 0xFF6B6B, 0.8);
                 
-                // Draw dashed rectangle manually
-                const x = pos.x - 25;
-                const y = pos.y - 15;
-                const width = 50;
-                const height = 30;
+                // Calculate proper center position for multi-cell gaps
+                const centerX = pos.x + (cellSize * (gapSize.width - 1)) / 2;
+                const centerY = pos.y + (cellSize * (gapSize.height - 1)) / 2;
+                
+                // Draw dashed rectangle based on gap size
+                const width = (cellSize * gapSize.width) - 10;
+                const height = (cellSize * gapSize.height) - 10;
+                const x = centerX - width / 2;
+                const y = centerY - height / 2;
                 const dashLength = 5;
                 const gapLength = 5;
                 
@@ -714,17 +784,15 @@
                 
                 graphics.strokePath();
                 
-                // Add gap label
-                const gapLabel = scene.add.text(pos.x, pos.y, 'MISSING\nPART', {
-                    fontSize: '10px',
-                    fill: '#FF6B6B',
-                    align: 'center'
-                }).setOrigin(0.5);
+                // Store only the graphics (no text label for cleaner appearance)
+                gap.sprite = scene.add.group([graphics]);
                 
-                gap.sprite = scene.add.group([graphics, gapLabel]);
-                
-                // Mark gap in grid (but keep it empty for placement)
-                setGridPosition(gap.x, gap.y, 'gap');
+                // Mark all cells occupied by this gap
+                for (let dy = 0; dy < gapSize.height; dy++) {
+                    for (let dx = 0; dx < gapSize.width; dx++) {
+                        setGridPosition(gap.x + dx, gap.y + dy, 'gap');
+                    }
+                }
             });
         }
 
@@ -760,55 +828,108 @@
         function createItemBank() {
             const itemBankContainer = document.getElementById('item-bank-grid');
             
-            // Define available items - real-world materials
+            // Define available items - real-world materials with sizes
             const itemDefinitions = [
+                // Conductors
                 {
-                    id: 'copper_coin',
-                    name: 'Copper Coin',
+                    id: 'soda_bottle_cap',
+                    name: 'Soda Bottle Cap',
                     type: 'conductor',
                     conductive: true,
-                    color: '#CD7F32',
+                    color: '#FF6B35',
+                    size: { width: 1, height: 1 },
                     quantity: 2
                 },
                 {
-                    id: 'metal_spoon',
-                    name: 'Metal Spoon',
+                    id: 'metal_key',
+                    name: 'Metal Key',
                     type: 'conductor',
                     conductive: true,
                     color: '#C0C0C0',
+                    size: { width: 2, height: 1 },
                     quantity: 2
                 },
                 {
-                    id: 'rubber_eraser',
-                    name: 'Rubber Eraser',
-                    type: 'insulator',
-                    conductive: false,
-                    color: '#FF69B4',
-                    quantity: 2
-                },
-                {
-                    id: 'wooden_pencil',
-                    name: 'Wooden Pencil',
-                    type: 'insulator',
-                    conductive: false,
-                    color: '#8B4513',
-                    quantity: 2
-                },
-                {
-                    id: 'plastic_bottle',
-                    name: 'Plastic Bottle',
-                    type: 'insulator',
-                    conductive: false,
-                    color: '#87CEEB',
-                    quantity: 1
-                },
-                {
-                    id: 'aluminum_foil',
-                    name: 'Aluminum Foil',
+                    id: 'paper_clip',
+                    name: 'Paper Clip',
                     type: 'conductor',
                     conductive: true,
                     color: '#B8B8B8',
+                    size: { width: 2, height: 1 },
                     quantity: 2
+                },
+                {
+                    id: 'spoon',
+                    name: 'Spoon',
+                    type: 'conductor',
+                    conductive: true,
+                    color: '#E5E5E5',
+                    size: { width: 3, height: 1 },
+                    quantity: 1
+                },
+                {
+                    id: 'metal_ruler',
+                    name: 'Metal Ruler',
+                    type: 'conductor',
+                    conductive: true,
+                    color: '#A8A8A8',
+                    size: { width: 3, height: 1 },
+                    quantity: 1
+                },
+                // Insulators
+                {
+                    id: 'lego_brick',
+                    name: 'Lego Brick',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#FF0000',
+                    size: { width: 1, height: 1 },
+                    quantity: 2
+                },
+                {
+                    id: 'pebble',
+                    name: 'Pebble',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#8B7355',
+                    size: { width: 1, height: 1 },
+                    quantity: 2
+                },
+                {
+                    id: 'eraser',
+                    name: 'Eraser',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#FF69B4',
+                    size: { width: 2, height: 1 },
+                    quantity: 2
+                },
+                {
+                    id: 'rubber_band',
+                    name: 'Rubber Band',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#8B4513',
+                    size: { width: 2, height: 1 },
+                    quantity: 2
+                },
+                {
+                    id: 'popsicle_stick',
+                    name: 'Popsicle Stick',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#DEB887',
+                    size: { width: 3, height: 1 },
+                    quantity: 1
+                },
+                {
+                    id: 'drinking_straw',
+                    name: 'Drinking Straw',
+                    type: 'insulator',
+                    conductive: false,
+                    color: '#FFD700',
+                    size: { width: 3, height: 1 },
+                    quantity: 1
                 }
             ];
             
@@ -832,6 +953,7 @@
                 type: definition.type,
                 conductive: definition.conductive,
                 color: definition.color,
+                size: definition.size || { width: 1, height: 1 },
                 inBank: true,
                 placed: false,
                 sprite: null,
@@ -844,9 +966,16 @@
         function createItemBankElement(item) {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'bank-item';
+            
+            // Calculate size based on item dimensions - make width differences more pronounced
+            const baseWidth = 60;
+            const baseHeight = 40;
+            const width = baseWidth + (item.size.width - 1) * 30; // More width difference
+            const height = baseHeight + (item.size.height - 1) * 10; // Less height difference
+            
             itemDiv.style.cssText = `
-                width: 80px;
-                height: 60px;
+                width: ${width}px;
+                height: ${height}px;
                 background-color: ${item.color};
                 border: 2px solid #333;
                 border-radius: 5px;
@@ -858,43 +987,106 @@
                 user-select: none;
                 transition: transform 0.2s, box-shadow 0.2s;
                 margin: 2px;
+                position: relative;
             `;
             
-            // Add material type indicator (without revealing if it's conductor/insulator)
-            const typeIndicator = document.createElement('div');
-            typeIndicator.style.cssText = `
-                width: 100%;
-                height: 15px;
-                background-color: #666666;
-                color: white;
-                font-size: 8px;
-                text-align: center;
-                line-height: 15px;
-                font-weight: bold;
-                margin-bottom: 2px;
-            `;
-            typeIndicator.textContent = 'MATERIAL';
-            
-            // Add item name
+            // Add item name (smaller font for longer items)
+            const fontSize = item.size.width > 2 ? '8px' : '10px';
             const nameLabel = document.createElement('div');
             nameLabel.style.cssText = `
                 color: white;
-                font-size: 10px;
+                font-size: ${fontSize};
                 text-align: center;
                 font-weight: bold;
                 text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
                 line-height: 12px;
+                padding: 2px;
+                word-wrap: break-word;
+                max-width: ${width - 10}px;
             `;
             nameLabel.textContent = item.name;
             
-            itemDiv.appendChild(typeIndicator);
             itemDiv.appendChild(nameLabel);
             
-            // Add hover effects
-            itemDiv.addEventListener('mouseenter', function() {
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.style.cssText = `
+                position: absolute;
+                background-color: rgba(186, 85, 211, 0.95);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+                white-space: nowrap;
+                z-index: 1000;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.2s;
+                min-height: 20px;
+                display: flex;
+                align-items: center;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            
+            // Calculate size information for tooltip content
+            const itemSize = item.size || { width: 1, height: 1 };
+            const totalCells = itemSize.width * itemSize.height;
+            const cellText = totalCells === 1 ? 'cell' : 'cells';
+            tooltip.innerHTML = `${item.name} (${totalCells} ${cellText})`;
+            
+            // Add arrow to tooltip
+            const arrow = document.createElement('div');
+            arrow.style.cssText = `
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 0;
+                border-left: 6px solid transparent;
+                border-right: 6px solid transparent;
+                border-top: 6px solid rgba(186, 85, 211, 0.95);
+            `;
+            tooltip.appendChild(arrow);
+            
+            // Add tooltip to body
+            document.body.appendChild(tooltip);
+            
+            // Add hover effects with tooltip
+            itemDiv.addEventListener('mouseenter', function(e) {
                 if (item.inBank) {
                     this.style.transform = 'scale(1.05)';
                     this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                    
+                    // Position tooltip using element-relative coordinates with scroll offset
+                    const rect = this.getBoundingClientRect();
+                    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+                    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+                    
+                    // Calculate tooltip position relative to the item element
+                    const tooltipWidth = tooltip.offsetWidth;
+                    const tooltipHeight = tooltip.offsetHeight;
+                    const itemCenterX = rect.left + scrollX + (rect.width / 2);
+                    const itemTopY = rect.top + scrollY;
+                    
+                    // Center tooltip horizontally above the item
+                    let tooltipLeft = itemCenterX - (tooltipWidth / 2);
+                    let tooltipTop = itemTopY - tooltipHeight - 8;
+                    
+                    // Ensure tooltip doesn't go off-screen horizontally
+                    const minLeft = 10;
+                    const maxLeft = window.innerWidth - tooltipWidth - 10;
+                    tooltipLeft = Math.max(minLeft, Math.min(tooltipLeft, maxLeft));
+                    
+                    // Ensure tooltip doesn't go off-screen vertically
+                    if (tooltipTop < 10) {
+                        tooltipTop = itemTopY + rect.height + 8; // Position below item if no space above
+                    }
+                    
+                    tooltip.style.left = tooltipLeft + 'px';
+                    tooltip.style.top = tooltipTop + 'px';
+                    tooltip.style.opacity = '1';
                 }
             });
             
@@ -902,11 +1094,13 @@
                 if (item.inBank) {
                     this.style.transform = 'scale(1)';
                     this.style.boxShadow = 'none';
+                    tooltip.style.opacity = '0';
                 }
             });
             
-            // Store reference
+            // Store references
             item.htmlElement = itemDiv;
+            item.tooltip = tooltip;
             itemDiv.itemData = item;
             
             return itemDiv;
@@ -915,24 +1109,38 @@
         function createGameSprite(item, x, y) {
             const pos = gridToWorld(x, y);
             
+            // Calculate sprite size based on item size
+            const cellSize = gameState.cellSize;
+            const spriteWidth = (cellSize * item.size.width) - 10;
+            const spriteHeight = (cellSize * item.size.height) - 10;
+            
+            // Adjust position for multi-cell items to center them properly within their grid space
+            const adjustedX = pos.x + (cellSize * (item.size.width - 1)) / 2;
+            const adjustedY = pos.y + (cellSize * (item.size.height - 1)) / 2;
+            
             // Create the main item sprite
-            const itemSprite = scene.add.rectangle(pos.x, pos.y, 40, 20, item.color);
+            const itemSprite = scene.add.rectangle(adjustedX, adjustedY, spriteWidth, spriteHeight, item.color);
             itemSprite.setStrokeStyle(2, 0x000000);
             
-            // Add neutral type indicator on the sprite
-            const typeIndicator = scene.add.rectangle(pos.x, pos.y - 15, 40, 8, 0x666666);
+            // Size indicator and text removed for cleaner visual design
             
-            // Add text label
-            const label = scene.add.text(pos.x, pos.y + 20, item.name.toUpperCase(), {
+            // Add text label with better styling and positioning
+            const labelBackground = scene.add.rectangle(adjustedX, adjustedY - spriteHeight/2 - 15, item.name.length * 6 + 10, 16, 0xFFFFFF);
+            labelBackground.setStrokeStyle(1, 0x333333);
+            labelBackground.setAlpha(0.9);
+            
+            const label = scene.add.text(adjustedX, adjustedY - spriteHeight/2 - 15, item.name.toUpperCase(), {
                 fontSize: '8px',
-                fill: '#333333'
+                fill: '#333333',
+                fontWeight: 'bold'
             }).setOrigin(0.5);
             
-            // Store original position for drag distance calculation
-            item.originalX = pos.x;
-            item.originalY = pos.y;
+            // Store original position and dimensions for drag distance calculation
+            item.originalX = adjustedX;
+            item.originalY = adjustedY;
             item.originalGridX = x;
             item.originalGridY = y;
+            item.spriteHeight = spriteHeight;
             
             // Only make draggable if it's not a pre-placed component
             if (!isPreplacedComponent(x, y)) {
@@ -961,7 +1169,7 @@
                     // Visual feedback - make semi-transparent and bring to front
                     this.setAlpha(0.8);
                     this.setDepth(1000);
-                    typeIndicator.setDepth(1000);
+                    labelBackground.setDepth(1000);
                     label.setDepth(1000);
                     
                     // Change stroke to indicate dragging
@@ -975,10 +1183,10 @@
                     // Update positions
                     this.x = dragX;
                     this.y = dragY;
-                    typeIndicator.x = dragX;
-                    typeIndicator.y = dragY - 15;
+                    labelBackground.x = dragX;
+                    labelBackground.y = dragY - item.spriteHeight/2 - 15;
                     label.x = dragX;
-                    label.y = dragY + 20;
+                    label.y = dragY - item.spriteHeight/2 - 15;
                     
                     // Enhanced distance threshold detection
                     const distance = Phaser.Math.Distance.Between(
@@ -1064,10 +1272,11 @@
                             ease: 'Back.easeOut'
                         });
                         
+                        // Animate label background and text back to position
                         scene.tweens.add({
-                            targets: typeIndicator,
+                            targets: labelBackground,
                             x: item.originalX,
-                            y: item.originalY - 15,
+                            y: item.originalY - item.spriteHeight/2 - 15,
                             duration: 300,
                             ease: 'Back.easeOut'
                         });
@@ -1075,7 +1284,7 @@
                         scene.tweens.add({
                             targets: label,
                             x: item.originalX,
-                            y: item.originalY + 20,
+                            y: item.originalY - item.spriteHeight/2 - 15,
                             duration: 300,
                             ease: 'Back.easeOut'
                         });
@@ -1084,7 +1293,7 @@
                         this.setStrokeStyle(2, 0x000000);
                         this.setAlpha(1.0);
                         this.setDepth(0);
-                        typeIndicator.setDepth(0);
+                        labelBackground.setDepth(0);
                         label.setDepth(0);
                         
                         // Show feedback
@@ -1109,7 +1318,7 @@
             }
             
             // Group all components
-            const spriteGroup = scene.add.group([itemSprite, typeIndicator, label]);
+            const spriteGroup = scene.add.group([itemSprite, labelBackground, label]);
             
             // Store references
             item.sprite = spriteGroup;
@@ -1292,17 +1501,33 @@
             item.gridX = gridX;
             item.gridY = gridY;
             
-            // Update grid
-            setGridPosition(gridX, gridY, item);
+            // Update grid - mark all cells occupied by this item
+            for (let dy = 0; dy < item.size.height; dy++) {
+                for (let dx = 0; dx < item.size.width; dx++) {
+                    setGridPosition(gridX + dx, gridY + dy, item);
+                }
+            }
             
-            // Check if this fills a gap
-            const gap = gameState.gaps.find(g => g.x === gridX && g.y === gridY);
+            // Check if this fills a gap (must match size exactly)
+            const gap = gameState.gaps.find(g => 
+                g.x === gridX && g.y === gridY &&
+                g.size.width === item.size.width &&
+                g.size.height === item.size.height
+            );
+            
             if (gap) {
                 gap.filled = true;
+                gap.filledWith = item;
                 if (gap.sprite) {
                     gap.sprite.setVisible(false);
                 }
+                
+                // Show success feedback for correct placement
+                showFeedback(`✅ ${item.name} placed in ${gap.label}!`, 'success');
             }
+            
+            // Add to placed items
+            gameState.placedItems.push(item);
             
             // Update wire connections when item is placed
             updateWireConnections();
@@ -1478,36 +1703,65 @@
             // Convert to grid coordinates
             const gridPos = worldToGrid(canvasX, canvasY);
             
-            // Check if it's a valid gap position
-            const isGap = gameState.gaps.some(gap => 
-                gap.x === gridPos.x && gap.y === gridPos.y && !gap.filled
+            // Get the dragged item's size
+            const draggedItem = gameState.draggedItem;
+            if (!draggedItem || !draggedItem.size) {
+                return { valid: false };
+            }
+            
+            // Check if there's a gap that matches the item size at this position
+            const matchingGap = gameState.gaps.find(gap => 
+                gap.x === gridPos.x && gap.y === gridPos.y && 
+                !gap.filled &&
+                gap.size.width === draggedItem.size.width &&
+                gap.size.height === draggedItem.size.height
             );
             
-            if (isGap && isGridPositionEmpty(gridPos.x, gridPos.y)) {
-                return { valid: true, gridX: gridPos.x, gridY: gridPos.y };
+            if (matchingGap && isGridPositionEmpty(gridPos.x, gridPos.y)) {
+                return { valid: true, gridX: gridPos.x, gridY: gridPos.y, gap: matchingGap };
             }
             
             return { valid: false };
         }
 
         function highlightDropZones(show) {
+            const draggedItem = gameState.draggedItem;
+            
             gameState.gaps.forEach(gap => {
                 if (!gap.filled && gap.sprite) {
                     const graphics = gap.sprite.getChildren()[0]; // Get the graphics object
                     const pos = gridToWorld(gap.x, gap.y);
-                    const x = pos.x - 25;
-                    const y = pos.y - 15;
-                    const width = 50;
-                    const height = 30;
+                    
+                    // Calculate gap size based on the gap's size property
+                    const gapSize = gap.size || { width: 1, height: 1 };
+                    const cellSize = gameState.cellSize;
+                    
+                    // Calculate proper center position for multi-cell gaps (same as markGaps)
+                    const centerX = pos.x + (cellSize * (gapSize.width - 1)) / 2;
+                    const centerY = pos.y + (cellSize * (gapSize.height - 1)) / 2;
+                    
+                    const width = (cellSize * gapSize.width) - 10;
+                    const height = (cellSize * gapSize.height) - 10;
+                    const x = centerX - width / 2;
+                    const y = centerY - height / 2;
                     
                     graphics.clear();
                     
-                    if (show) {
-                        // Show solid green highlight
+                    // Check if this gap is compatible with the dragged item
+                    const isCompatible = !draggedItem || 
+                        (draggedItem.size.width === gapSize.width && 
+                         draggedItem.size.height === gapSize.height);
+                    
+                    if (show && isCompatible) {
+                        // Show solid green highlight for compatible gaps
                         graphics.lineStyle(3, 0x4CAF50, 1.0);
                         graphics.strokeRect(x, y, width, height);
+                    } else if (show && !isCompatible) {
+                        // Show orange highlight for incompatible gaps
+                        graphics.lineStyle(2, 0xFF9800, 0.6);
+                        graphics.strokeRect(x, y, width, height);
                     } else {
-                        // Show dashed red outline
+                        // Show dashed red outline (default state)
                         graphics.lineStyle(2, 0xFF6B6B, 0.8);
                         
                         const dashLength = 5;

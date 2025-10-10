@@ -8,14 +8,15 @@ This feature involves creating an educational game for children to learn about e
 
 ### Requirement 1
 
-**User Story:** As a child learning about electricity, I want to see a grid-based playing field with a partially completed circuit, so that I can understand the basic structure of electrical circuits.
+**User Story:** As a child learning about electricity, I want to see a 15x15 grid-based playing field with a partially completed circuit, so that I can understand the basic structure of electrical circuits and have space for more complex designs.
 
 #### Acceptance Criteria
 
-1. WHEN the game loads THEN the system SHALL display a grid-based playing field
+1. WHEN the game loads THEN the system SHALL display a 15x15 grid-based playing field
 2. WHEN the playing field is displayed THEN the system SHALL show a light bulb, battery, and pre-placed wires
 3. WHEN the circuit is displayed THEN the system SHALL show missing gaps of varying sizes that need to be filled
 4. WHEN the circuit is displayed THEN the system SHALL ensure the pre-placed wires guide toward a logical solution
+5. WHEN the expanded grid is displayed THEN the system SHALL accommodate more complex circuit designs with additional space for creative solutions
 
 ### Requirement 2
 
@@ -112,6 +113,18 @@ This feature involves creating an educational game for children to learn about e
 
 ### Requirement 10
 
+**User Story:** As a child who wants to build more complex circuits, I want the expanded 15x15 grid to support larger and more intricate circuit designs, so that I can explore advanced electrical concepts.
+
+#### Acceptance Criteria
+
+1. WHEN the grid is expanded to 15x15 THEN the system SHALL maintain the same cell size and visual clarity
+2. WHEN more complex circuits are designed THEN the system SHALL support multiple parallel paths and branching circuits
+3. WHEN the larger grid is used THEN the system SHALL allow for creative circuit layouts beyond simple linear connections
+4. WHEN the expanded grid is displayed THEN the system SHALL maintain responsive design and fit appropriately on different screen sizes
+5. WHEN complex circuits are built THEN the system SHALL continue to accurately evaluate electrical flow through all possible paths
+
+### Requirement 11
+
 **User Story:** As a user accessing this educational game, I want it to run in a web browser using a single HTML file, so that it's easy to access and share.
 
 #### Acceptance Criteria
@@ -120,3 +133,92 @@ This feature involves creating an educational game for children to learn about e
 2. WHEN the game is packaged THEN the system SHALL be contained in a single HTML file
 3. WHEN the HTML file is opened in a browser THEN the system SHALL load and run the complete game
 4. WHEN the game runs THEN the system SHALL not require external image files for basic functionality
+
+### Requirement 12
+
+**User Story:** As a child learning about circuits, I want the missing part indicators to be clear and simple, so that I can easily see where items need to be placed without visual distractions.
+
+#### Acceptance Criteria
+
+1. WHEN missing parts are displayed THEN the system SHALL show only a dashed outline without any overlay
+2. WHEN missing parts are displayed THEN the system SHALL NOT show size information, black backgrounds, or text labels
+3. WHEN missing parts are displayed THEN the system SHALL use simple visual indicators that don't obstruct the circuit view
+4. WHEN missing parts are displayed THEN the system SHALL maintain clear visibility of the underlying grid and circuit components
+5. WHEN multi-cell missing parts are displayed THEN the system SHALL position them correctly to span their intended grid cells without overlapping wires
+6. WHEN drag operations occur THEN the system SHALL maintain consistent positioning of missing part indicators without shifting or misalignment
+7. WHEN the circuit layout is designed THEN the system SHALL position missing parts strategically across both top and bottom wire paths for varied gameplay
+8. WHEN missing parts are positioned THEN the system SHALL ensure visual balance with equal spacing on top wire and centered positioning on bottom wire
+
+### Requirement 13
+
+**User Story:** As a child placing items in the circuit, I want multi-cell items to be positioned correctly within their designated spaces, so that they don't overlap with existing wires or components.
+
+#### Acceptance Criteria
+
+1. WHEN 2x1 or 3x1 items are placed THEN the system SHALL position them properly within their grid cells
+2. WHEN multi-cell items are placed THEN the system SHALL ensure they do not overlap with pre-existing wires
+3. WHEN items are positioned THEN the system SHALL center them appropriately within their allocated grid space
+4. WHEN items are placed THEN the system SHALL maintain proper visual alignment with the circuit layout
+5. WHEN multi-cell items are placed THEN the system SHALL ensure proper electrical connections at all contact points
+6. WHEN items have labels THEN the system SHALL position labels above the items with proper styling and background
+
+### Requirement 14
+
+**User Story:** As a child exploring the item bank, I want item tooltips to show the item name and size information with accurate positioning, so that I can quickly identify items and understand their dimensions regardless of page scroll position.
+
+#### Acceptance Criteria
+
+1. WHEN I hover over an item in the item bank THEN the system SHALL display the item name and size in the tooltip using the format "Item Name (X cell)" or "Item Name (X cells)"
+2. WHEN tooltips are displayed for multi-cell items THEN the system SHALL show the format "Item Name (X cells)" (e.g., "Metal Rod (3 cells)" for 3x1 items, "Copper Wire (2 cells)" for 2x1 items)
+3. WHEN tooltips are displayed for single-cell items THEN the system SHALL show the format "Item Name (1 cell)" (e.g., "Coin (1 cell)")
+4. WHEN tooltips appear THEN the system SHALL use clean, simple formatting with proper height and readable background
+5. WHEN tooltips are shown THEN the system SHALL position them directly above the item being hovered on using relative positioning to the item element
+6. WHEN the page is scrolled THEN the system SHALL maintain correct tooltip positioning relative to the hovered item without shifting
+7. WHEN I move away from an item THEN the system SHALL hide the tooltip immediately
+8. WHEN tooltips are displayed THEN the system SHALL use a light purple background color for better visibility
+9. WHEN tooltips are positioned THEN the system SHALL be centered horizontally above the item and use element-relative coordinates instead of viewport coordinates
+10. WHEN calculating tooltip position THEN the system SHALL account for the item's actual position on screen including any scroll offset
+
+### Requirement 15
+
+**User Story:** As a child who successfully completes the first circuit, I want to progress to a more challenging stage with multiple circuit paths, so that I can learn about parallel circuits and more complex electrical concepts.
+
+#### Acceptance Criteria
+
+1. WHEN I complete the first stage successfully THEN the system SHALL display a "Next Stage" button in the success modal
+2. WHEN I click the "Next Stage" button THEN the system SHALL load Stage 2 with a more complex circuit layout
+3. WHEN Stage 2 loads THEN the system SHALL display a circuit with multiple paths and branching connections
+4. WHEN Stage 2 is displayed THEN the system SHALL show the battery positioned on the left side of the grid
+5. WHEN Stage 2 is displayed THEN the system SHALL show the light bulb positioned on the right side of the grid
+6. WHEN Stage 2 is displayed THEN the system SHALL show three missing parts: one rectangular part at top center, one square part at middle left, and one rectangular part at bottom left
+7. WHEN Stage 2 circuit is evaluated THEN the system SHALL support multiple parallel paths for electrical flow
+8. WHEN Stage 2 has a complete conductive path through any valid route THEN the system SHALL light up the bulb
+
+### Requirement 16
+
+**User Story:** As a child learning about parallel circuits, I want the Stage 2 circuit to be centered in the 15x15 grid with proper wire connections, so that I can clearly see how electricity can flow through multiple paths.
+
+#### Acceptance Criteria
+
+1. WHEN Stage 2 loads THEN the system SHALL center the entire circuit layout within the 15x15 grid
+2. WHEN Stage 2 is displayed THEN the system SHALL show continuous wire connections forming the circuit framework
+3. WHEN Stage 2 wires are displayed THEN the system SHALL create a top path connecting battery to bulb through the top missing part
+4. WHEN Stage 2 wires are displayed THEN the system SHALL create a bottom path connecting battery to bulb through the bottom missing parts
+5. WHEN Stage 2 wires are displayed THEN the system SHALL show proper branching where the circuit splits into multiple paths
+6. WHEN Stage 2 wires are displayed THEN the system SHALL show proper rejoining where the multiple paths converge back together
+7. WHEN items are placed in Stage 2 THEN the system SHALL maintain continuous wire connections between all conductive components
+8. WHEN Stage 2 circuit is complete THEN the system SHALL visually demonstrate how current can flow through parallel paths
+
+### Requirement 17
+
+**User Story:** As a child working with the multi-stage game, I want the system to track my progress and maintain the same electrical principles across all stages, so that I have a consistent learning experience.
+
+#### Acceptance Criteria
+
+1. WHEN I switch between stages THEN the system SHALL maintain the same drag-and-drop functionality
+2. WHEN I switch between stages THEN the system SHALL maintain the same conductor and insulator behavior
+3. WHEN I switch between stages THEN the system SHALL reset the item bank to full quantities for each new stage
+4. WHEN I switch between stages THEN the system SHALL clear any previously placed items
+5. WHEN I am in Stage 2 THEN the system SHALL evaluate circuits using the same electrical flow principles as Stage 1
+6. WHEN I complete Stage 2 THEN the system SHALL display the same success modal format as Stage 1
+7. WHEN I use the reset button in any stage THEN the system SHALL reset only the current stage without affecting stage progression
