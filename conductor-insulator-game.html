@@ -495,37 +495,47 @@
             cellSize: canvasSize / 15, // Dynamic cell size based on canvas
             itemBank: [],
             placedItems: [],
-            battery: { x: 2, y: 7, sprite: null },
-            bulb: { x: 13, y: 7, sprite: null, isLit: false },
+            battery: { x: 2, y: 6, width: 1, height: 3, sprite: null },
+            bulb: { x: 11, y: 6, width: 3, height: 3, sprite: null, isLit: false },
             // Two-wire circuit: top wire (positive) and bottom wire (negative)
             gaps: [
-                // Two missing parts on top wire with equal spacing, one centered on bottom wire
-                { x: 4, y: 6, filled: false, size: { width: 1, height: 1 } },
-                { x: 8, y: 6, filled: false, size: { width: 2, height: 1 } },
-                { x: 6, y: 8, filled: false, size: { width: 3, height: 1 } }
+                // Top wire gaps (row 4) - Adjacent M labels count as single missing parts
+                { x: 5, y: 4, filled: false, size: { width: 1, height: 1 } }, // Single M at (5,4)
+                { x: 8, y: 4, filled: false, size: { width: 2, height: 1 } }, // M M at (8,4) and (9,4) = 1x2 gap
+                // Bottom wire gaps (row 10) - Adjacent M labels count as single missing parts  
+                { x: 6, y: 10, filled: false, size: { width: 3, height: 1 } }  // M M M at (6,10), (7,10), (8,10) = 1x3 gap
             ],
             preplacedWires: [
-                // Top wire connections (with gaps: 1x1 at x:4, 2x1 at x:8-9)
-                { x: 3, y: 6 }, // From battery positive
-                // Gap for 1x1 at x:4
-                { x: 5, y: 6 }, // After first gap
-                { x: 6, y: 6 },
-                { x: 7, y: 6 }, // Before second gap
-                // Gap for 2x1 at x:8-9
-                { x: 10, y: 6 }, // After second gap
-                { x: 11, y: 6 },
-                { x: 12, y: 6 },
-                { x: 13, y: 6 }, // To bulb
-                // Bottom wire connections (with gap for 3x1 at x:6-8)
-                { x: 13, y: 8 }, // From bulb
-                { x: 12, y: 8 },
-                { x: 11, y: 8 },
-                { x: 10, y: 8 },
-                { x: 9, y: 8 }, // Before 3x1 gap
-                // Gap for 3x1 at x:6-8
-                { x: 5, y: 8 }, // After 3x1 gap
-                { x: 4, y: 8 },
-                { x: 3, y: 8 }  // To battery negative
+                // Top horizontal wire (positive path) - row 4
+                { x: 3, y: 4 }, // H - Horizontal wire after L-shaped connection
+                { x: 4, y: 4 }, // H - Horizontal wire before first gap
+                // Gap at x:5 (M)
+                { x: 6, y: 4 }, // H - Horizontal wire after first gap
+                { x: 7, y: 4 }, // H - Horizontal wire before second gap
+                // Gaps at x:8,9 (M M)
+                { x: 10, y: 4 }, // H - Horizontal wire after gaps
+                { x: 11, y: 4 }, // H - Horizontal wire before L-shaped connection
+                
+                // Battery connections
+                { x: 2, y: 4 }, // L - L-shaped wire at top
+                { x: 2, y: 5 }, // V - Vertical wire connecting to battery
+                { x: 2, y: 9 }, // V - Vertical wire connecting from battery
+                { x: 2, y: 10 }, // L - L-shaped wire at bottom
+                
+                // Bulb connections
+                { x: 12, y: 4 }, // L - L-shaped wire at top
+                { x: 12, y: 5 }, // V - Vertical wire connecting to bulb
+                { x: 12, y: 9 }, // V - Vertical wire connecting from bulb
+                { x: 12, y: 10 }, // L - L-shaped wire at bottom
+                
+                // Bottom horizontal wire (negative path) - row 10
+                { x: 3, y: 10 }, // H - Horizontal wire after L-shaped connection
+                { x: 4, y: 10 }, // H - Horizontal wire
+                { x: 5, y: 10 }, // H - Horizontal wire before gaps
+                // Gaps at x:6,7,8 (M M M)
+                { x: 9, y: 10 }, // H - Horizontal wire after gaps
+                { x: 10, y: 10 }, // H - Horizontal wire
+                { x: 11, y: 10 }  // H - Horizontal wire before L-shaped connection
             ],
             draggedItem: null,
             isDragging: false,
@@ -645,13 +655,13 @@
             graphics.lineStyle(2, 0x4CAF50, 0.3);
             graphics.fillStyle(0x4CAF50, 0.1);
             
-            // Top wire (row 6)
-            graphics.fillRect(0, 6 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
-            graphics.strokeRect(0, 6 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            // Top wire (row 4)
+            graphics.fillRect(0, 4 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            graphics.strokeRect(0, 4 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
             
-            // Bottom wire (row 8)  
-            graphics.fillRect(0, 8 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
-            graphics.strokeRect(0, 8 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            // Bottom wire (row 10)  
+            graphics.fillRect(0, 10 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
+            graphics.strokeRect(0, 10 * gameState.cellSize, gameState.gridWidth * gameState.cellSize, gameState.cellSize);
         }
 
         function createCircuitComponents() {
@@ -669,120 +679,281 @@
         }
 
         function createBattery() {
-            const pos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            // Battery now spans 1x3 cells (width=1, height=3) at position (2, 4-6)
+            const centerX = gameState.battery.x;
+            const centerY = gameState.battery.y + 1; // Center of the three cells
+            const pos = gridToWorld(centerX, centerY);
             
-            // Create battery using image asset
+            // Create battery using image asset - sized to fill 1x3 cells completely
             let batteryImage;
             if (scene.textures.exists('battery')) {
                 batteryImage = scene.add.image(pos.x, pos.y, 'battery');
-                batteryImage.setDisplaySize(50, 50);
+                batteryImage.setDisplaySize(gameState.cellSize, gameState.cellSize * 3); // Full 1x3 cells
                 console.log('Battery image created successfully');
             } else {
                 console.error('Battery texture not found, creating fallback');
-                // Create fallback colored rectangle
-                batteryImage = scene.add.rectangle(pos.x, pos.y, 50, 50, 0x333333);
+                // Create fallback colored rectangle for full 1x3 cells
+                batteryImage = scene.add.rectangle(pos.x, pos.y, gameState.cellSize, gameState.cellSize * 3, 0x333333);
                 batteryImage.setStrokeStyle(2, 0x000000);
             }
             
-            // Add connection wires from terminals
-            const positiveWire = scene.add.rectangle(pos.x + 35, pos.y - 15, 20, 4, 0xCD7F32);
-            const negativeWire = scene.add.rectangle(pos.x + 35, pos.y + 15, 20, 4, 0xCD7F32);
-            
-            // Add labels
-            const positiveLabel = scene.add.text(pos.x + 25, pos.y - 35, '+', {
-                fontSize: '16px',
-                fill: '#FF0000',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-            
-            const negativeLabel = scene.add.text(pos.x + 25, pos.y + 35, '-', {
-                fontSize: '16px',
-                fill: '#000000',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-            
-            const batteryLabel = scene.add.text(pos.x, pos.y + 40, 'BATTERY', {
-                fontSize: '10px',
-                fill: '#333333'
-            }).setOrigin(0.5);
+            // Set depth to appear above wires
+            batteryImage.setDepth(10);
             
             // Group all battery components
             gameState.battery.sprite = scene.add.group([
-                batteryImage, positiveWire, negativeWire,
-                positiveLabel, negativeLabel, batteryLabel
+                batteryImage
             ]);
             
-            // Mark battery position in grid
-            setGridPosition(gameState.battery.x, gameState.battery.y, 'battery');
-            // Also mark the wire connection positions
-            setGridPosition(gameState.battery.x, gameState.battery.y - 1, 'battery'); // Top connection
-            setGridPosition(gameState.battery.x, gameState.battery.y + 1, 'battery'); // Bottom connection
+            // Mark battery positions in grid (all three cells: y=4,5,6)
+            for (let dy = 0; dy < gameState.battery.height; dy++) {
+                setGridPosition(gameState.battery.x, gameState.battery.y + dy, 'battery');
+            }
         }
 
         function createLightBulb() {
-            const pos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+            // Light bulb now spans 3x3 cells (width=3, height=3)
+            const centerX = gameState.bulb.x + 1; // Center of 3x3 grid
+            const centerY = gameState.bulb.y + 1; // Center of 3x3 grid
+            const pos = gridToWorld(centerX, centerY);
             
-            // Create light bulb using spritesheet (frame 0 = off, frame 1 = on)
+            // Create light bulb using spritesheet (frame 0 = off, frame 1 = on) - sized to fill 3x3 cells completely
             let bulbSprite;
             if (scene.textures.exists('lightbulb')) {
                 bulbSprite = scene.add.sprite(pos.x, pos.y, 'lightbulb', 0);
-                bulbSprite.setDisplaySize(50, 50);
+                bulbSprite.setDisplaySize(gameState.cellSize * 3, gameState.cellSize * 3); // Full 3x3 cells
                 console.log('Light bulb sprite created successfully');
             } else {
                 console.error('Light bulb texture not found, creating fallback');
-                // Create fallback colored circle
-                bulbSprite = scene.add.circle(pos.x, pos.y - 10, 15, 0xFFFFFF);
+                // Create fallback colored circle for full 3x3 cells
+                bulbSprite = scene.add.circle(pos.x, pos.y, gameState.cellSize * 1.5, 0xFFFFFF);
                 bulbSprite.setStrokeStyle(2, 0x000000);
                 bulbSprite.setAlpha(0.8);
             }
             
-            // Add connection wires to both top and bottom circuits
-            const topConnection = scene.add.rectangle(pos.x - 25, pos.y - 15, 20, 4, 0xCD7F32);
-            const bottomConnection = scene.add.rectangle(pos.x - 25, pos.y + 15, 20, 4, 0xCD7F32);
-            
-            // Add connection points on bulb
-            const topTerminal = scene.add.rectangle(pos.x - 15, pos.y - 15, 6, 4, 0x666666);
-            const bottomTerminal = scene.add.rectangle(pos.x - 15, pos.y + 15, 6, 4, 0x666666);
-            
-            const bulbLabel = scene.add.text(pos.x, pos.y + 35, 'LIGHT BULB', {
-                fontSize: '10px',
-                fill: '#333333'
-            }).setOrigin(0.5);
+            // Set depth to appear above wires
+            bulbSprite.setDepth(10);
             
             // Store references for later use
             gameState.bulb.sprite = scene.add.group([
-                bulbSprite, topConnection, bottomConnection,
-                topTerminal, bottomTerminal, bulbLabel
+                bulbSprite
             ]);
             gameState.bulb.bulbSprite = bulbSprite;
             
-            // Mark bulb position in grid
-            setGridPosition(gameState.bulb.x, gameState.bulb.y, 'bulb');
-            // Also mark the wire connection positions
-            setGridPosition(gameState.bulb.x, gameState.bulb.y - 1, 'bulb'); // Top connection
-            setGridPosition(gameState.bulb.x, gameState.bulb.y + 1, 'bulb'); // Bottom connection
+            // Mark bulb positions in grid (all 9 cells)
+            for (let dx = 0; dx < gameState.bulb.width; dx++) {
+                for (let dy = 0; dy < gameState.bulb.height; dy++) {
+                    setGridPosition(gameState.bulb.x + dx, gameState.bulb.y + dy, 'bulb');
+                }
+            }
         }
 
         function createPreplacedWires() {
             gameState.preplacedWires.forEach(wire => {
                 const pos = gridToWorld(wire.x, wire.y);
                 
-                // Create wire segment
-                const wireSprite = scene.add.rectangle(pos.x, pos.y, 40, 8, 0xCD7F32);
-                wireSprite.setStrokeStyle(1, 0x8B4513);
+                // Determine wire type based on position and connections
+                const wireType = determineWireType(wire.x, wire.y);
                 
-                // Add wire label
-                const wireLabel = scene.add.text(pos.x, pos.y + 20, 'WIRE', {
-                    fontSize: '8px',
-                    fill: '#666666'
-                }).setOrigin(0.5);
-                
-                // Store wire data
-                wire.sprite = scene.add.group([wireSprite, wireLabel]);
+                // Create wire segment based on type
+                if (wireType === 'L-shaped') {
+                    wire.sprite = createLShapedWire(pos, wire.x, wire.y);
+                } else if (wireType === 'T-shaped') {
+                    wire.sprite = createTShapedWire(pos, wire.x, wire.y);
+                } else {
+                    // Create straight wire - determine orientation based on position
+                    wire.sprite = createStraightWire(pos, wire.x, wire.y);
+                }
                 
                 // Mark wire position in grid
                 setGridPosition(wire.x, wire.y, 'wire');
             });
+        }
+
+        function determineWireType(x, y) {
+            // Check for T-shaped junctions (where three or more wires meet)
+            const adjacentWires = getAdjacentWireCount(x, y);
+            if (adjacentWires >= 3) {
+                return 'T-shaped';
+            }
+            
+            // Check for L-shaped junctions (corner connections)
+            if (adjacentWires === 2) {
+                // Check if it's a corner (not straight line)
+                const directions = getAdjacentWireDirections(x, y);
+                if (directions.length === 2) {
+                    const [dir1, dir2] = directions;
+                    // If directions are perpendicular, it's an L-shape
+                    if ((dir1.dx === 0) !== (dir2.dx === 0)) {
+                        return 'L-shaped';
+                    }
+                }
+            }
+            
+            return 'straight';
+        }
+
+        function getAdjacentWireCount(x, y) {
+            let count = 0;
+            const directions = [
+                { dx: -1, dy: 0 }, // left
+                { dx: 1, dy: 0 },  // right
+                { dx: 0, dy: -1 }, // up
+                { dx: 0, dy: 1 }   // down
+            ];
+            
+            directions.forEach(dir => {
+                const checkX = x + dir.dx;
+                const checkY = y + dir.dy;
+                if (isWirePosition(checkX, checkY)) {
+                    count++;
+                }
+            });
+            
+            return count;
+        }
+
+        function getAdjacentWireDirections(x, y) {
+            const directions = [];
+            const checkDirections = [
+                { dx: -1, dy: 0 }, // left
+                { dx: 1, dy: 0 },  // right
+                { dx: 0, dy: -1 }, // up
+                { dx: 0, dy: 1 }   // down
+            ];
+            
+            checkDirections.forEach(dir => {
+                const checkX = x + dir.dx;
+                const checkY = y + dir.dy;
+                if (isWirePosition(checkX, checkY)) {
+                    directions.push(dir);
+                }
+            });
+            
+            return directions;
+        }
+
+        function isWirePosition(x, y) {
+            return gameState.preplacedWires.some(wire => wire.x === x && wire.y === y);
+        }
+
+        function createStraightWire(pos, x, y) {
+            const group = scene.add.group();
+            const wireThickness = 12; // Thicker wires for better connection
+            const wireLength = gameState.cellSize; // Full cell size for proper connection
+            
+            // Determine if this should be a vertical or horizontal wire
+            const isVerticalWire = isVerticalWirePosition(x, y);
+            
+            let wireSprite;
+            if (isVerticalWire) {
+                // Create vertical wire - full height
+                wireSprite = scene.add.rectangle(pos.x, pos.y, wireThickness, wireLength, 0xCD7F32);
+            } else {
+                // Create horizontal wire - full width
+                wireSprite = scene.add.rectangle(pos.x, pos.y, wireLength, wireThickness, 0xCD7F32);
+            }
+            
+            wireSprite.setStrokeStyle(1, 0x8B4513);
+            wireSprite.setDepth(5);
+            group.add(wireSprite);
+            
+            return group;
+        }
+
+        function isVerticalWirePosition(x, y) {
+            // Vertical wires are at positions (2,5), (2,9), (12,5), (12,9)
+            return (x === 2 && (y === 5 || y === 9)) || (x === 12 && (y === 5 || y === 9));
+        }
+
+        function createLShapedWire(pos, x, y) {
+            const group = scene.add.group();
+            const wireThickness = 12; // Match straight wire thickness
+            const halfCell = gameState.cellSize / 2;
+            
+            // Create L-shaped wires that extend to cell edges for proper connection
+            if (x === 2 && y === 4) {
+                // Battery top L-wire: connects right (to horizontal wire) and down (to vertical wire)
+                const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                horizontalWire.setStrokeStyle(1, 0x8B4513);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                horizontalWire.setDepth(5);
+                verticalWire.setDepth(5);
+                group.add(horizontalWire);
+                group.add(verticalWire);
+            } else if (x === 2 && y === 10) {
+                // Battery bottom L-wire: connects right (to horizontal wire) and up (from vertical wire)
+                const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                horizontalWire.setStrokeStyle(1, 0x8B4513);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                horizontalWire.setDepth(5);
+                verticalWire.setDepth(5);
+                group.add(horizontalWire);
+                group.add(verticalWire);
+            } else if (x === 12 && y === 4) {
+                // Bulb top L-wire: connects left (from horizontal wire) and down (to vertical wire)
+                const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                horizontalWire.setStrokeStyle(1, 0x8B4513);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                horizontalWire.setDepth(5);
+                verticalWire.setDepth(5);
+                group.add(horizontalWire);
+                group.add(verticalWire);
+            } else if (x === 12 && y === 10) {
+                // Bulb bottom L-wire: connects up (from vertical wire) and left (to horizontal wire)
+                const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                horizontalWire.setStrokeStyle(1, 0x8B4513);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                horizontalWire.setDepth(5);
+                verticalWire.setDepth(5);
+                group.add(horizontalWire);
+                group.add(verticalWire);
+            }
+            
+            // Add center junction piece for proper connection
+            const centerPiece = scene.add.rectangle(pos.x, pos.y, wireThickness, wireThickness, 0xCD7F32);
+            centerPiece.setStrokeStyle(1, 0x8B4513);
+            centerPiece.setDepth(5);
+            group.add(centerPiece);
+            
+            return group;
+        }
+
+        function createTShapedWire(pos, x, y) {
+            const group = scene.add.group();
+            
+            // Create T-shape using rectangles to match straight wire styling
+            // Horizontal segment (always present)
+            const horizontalWire = scene.add.rectangle(pos.x, pos.y, 40, 8, 0xCD7F32);
+            horizontalWire.setStrokeStyle(1, 0x8B4513);
+            group.add(horizontalWire);
+            
+            // Vertical segments (based on adjacent wires)
+            const hasWireAbove = isWirePosition(x, y - 1);
+            const hasWireBelow = isWirePosition(x, y + 1);
+            
+            if (hasWireAbove && hasWireBelow) {
+                // Full vertical segment
+                const verticalWire = scene.add.rectangle(pos.x, pos.y, 8, 40, 0xCD7F32);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                group.add(verticalWire);
+            } else if (hasWireAbove) {
+                // Upper vertical segment
+                const verticalWire = scene.add.rectangle(pos.x, pos.y - 10, 8, 20, 0xCD7F32);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                group.add(verticalWire);
+            } else if (hasWireBelow) {
+                // Lower vertical segment
+                const verticalWire = scene.add.rectangle(pos.x, pos.y + 10, 8, 20, 0xCD7F32);
+                verticalWire.setStrokeStyle(1, 0x8B4513);
+                group.add(verticalWire);
+            }
+            
+            return group;
         }
 
         function markGaps() {
@@ -848,8 +1019,13 @@
         function updateLightBulb(isLit) {
             if (gameState.bulb.bulbSprite) {
                 if (isLit) {
-                    // Use frame 1 (right half) for lit state
-                    gameState.bulb.bulbSprite.setFrame(1);
+                    // Try to use frame 1 for lit state if it's a sprite, otherwise change tint
+                    if (gameState.bulb.bulbSprite.setFrame && typeof gameState.bulb.bulbSprite.setFrame === 'function') {
+                        gameState.bulb.bulbSprite.setFrame(1);
+                    } else {
+                        // Fallback: change tint to yellow for lit state
+                        gameState.bulb.bulbSprite.setTint(0xFFFF88);
+                    }
                     
                     // Add glow effect
                     if (!gameState.bulb.glowEffect) {
@@ -863,8 +1039,13 @@
                     }
                     gameState.bulb.glowEffect.setVisible(true);
                 } else {
-                    // Use frame 0 (left half) for off state
-                    gameState.bulb.bulbSprite.setFrame(0);
+                    // Try to use frame 0 for off state if it's a sprite, otherwise clear tint
+                    if (gameState.bulb.bulbSprite.setFrame && typeof gameState.bulb.bulbSprite.setFrame === 'function') {
+                        gameState.bulb.bulbSprite.setFrame(0);
+                    } else {
+                        // Fallback: clear tint for off state
+                        gameState.bulb.bulbSprite.clearTint();
+                    }
                     
                     if (gameState.bulb.glowEffect) {
                         gameState.bulb.glowEffect.setVisible(false);
@@ -1753,10 +1934,10 @@
         }
 
         function createDragPreview(item, x, y) {
-            // Calculate preview size based on item's actual grid size
+            // Calculate preview size based on item's actual grid size - maintain original size
             const cellSize = gameState.cellSize;
-            const previewWidth = (cellSize * item.size.width) * 0.8; // Slightly smaller for preview
-            const previewHeight = (cellSize * item.size.height) * 0.8;
+            const previewWidth = cellSize * item.size.width; // Full size to match original item
+            const previewHeight = cellSize * item.size.height;
             
             const preview = document.createElement('div');
             preview.id = 'drag-preview';
@@ -1779,7 +1960,6 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                transform: scale(0.9);
             `;
             
             // No labels needed - just the image background
@@ -2105,32 +2285,36 @@
             // Two-wire circuit: positive terminal -> top wire -> bulb -> bottom wire -> negative terminal
             
             // Check if we can trace a complete path from battery positive to battery negative through the bulb
-            // The path must go: battery positive -> top wire -> bulb top -> bulb bottom -> bottom wire -> battery negative
+            // The path must go: battery positive -> L-wire -> top wire -> L-wire -> bulb -> L-wire -> bottom wire -> L-wire -> battery negative
+            // Updated for battery (1x3 at x=2, y=4-6) and bulb (3x3 at x=11-13, y=4-6)
             
-            const batteryPosX = gameState.battery.x + 1; // Position right of battery
-            const topWireY = gameState.battery.y - 1;    // Top wire (y=3)
-            const bottomWireY = gameState.battery.y + 1; // Bottom wire (y=5)
-            const bulbTopY = gameState.bulb.y - 1;       // Bulb top connection
-            const bulbBottomY = gameState.bulb.y + 1;    // Bulb bottom connection
+            const topWireY = 4;        // Top wire row
+            const bottomWireY = 10;    // Bottom wire row
             
             console.log('Checking circuit path...');
-            console.log('Battery at:', gameState.battery.x, gameState.battery.y);
-            console.log('Bulb at:', gameState.bulb.x, gameState.bulb.y);
+            console.log('Battery at:', gameState.battery.x, gameState.battery.y, 'size:', gameState.battery.width + 'x' + gameState.battery.height);
+            console.log('Bulb at:', gameState.bulb.x, gameState.bulb.y, 'size:', gameState.bulb.width + 'x' + gameState.bulb.height);
             
-            // Check path from battery positive terminal to bulb via top wire
-            const topPathComplete = checkPathSegment(batteryPosX, topWireY, gameState.bulb.x, bulbTopY);
-            console.log('Top path (battery to bulb):', topPathComplete);
+            // Check path from battery L-wire to bulb L-wire via top wire (row 4)
+            const topPathComplete = checkPathSegment(3, topWireY, 11, topWireY);
+            console.log('Top path (battery to bulb via top wire):', topPathComplete);
             
-            // Check path from bulb to battery negative terminal via bottom wire  
-            const bottomPathComplete = checkPathSegment(gameState.bulb.x, bulbBottomY, batteryPosX, bottomWireY);
-            console.log('Bottom path (bulb to battery):', bottomPathComplete);
+            // Check path from bulb L-wire to battery L-wire via bottom wire (row 10)
+            const bottomPathComplete = checkPathSegment(11, bottomWireY, 3, bottomWireY);
+            console.log('Bottom path (bulb to battery via bottom wire):', bottomPathComplete);
             
-            // Check if bulb connections are conductive (bulb acts as a bridge between top and bottom)
-            const bulbConnected = isConductive(gameState.bulb.x, bulbTopY) && 
-                                 isConductive(gameState.bulb.x, bulbBottomY);
-            console.log('Bulb connected:', bulbConnected);
+            // Check if vertical wire connections are conductive
+            const batteryVWiresConnected = isConductive(2, 5) && isConductive(2, 9);
+            const bulbVWiresConnected = isConductive(12, 5) && isConductive(12, 9);
+            // Check if L-shaped wire connections are conductive
+            const batteryLWiresConnected = isConductive(2, 4) && isConductive(2, 10);
+            const bulbLWiresConnected = isConductive(12, 4) && isConductive(12, 10);
+            console.log('Battery vertical wires connected:', batteryVWiresConnected);
+            console.log('Battery L-wires connected:', batteryLWiresConnected);
+            console.log('Bulb vertical wires connected:', bulbVWiresConnected);
+            console.log('Bulb L-wires connected:', bulbLWiresConnected);
             
-            const circuitComplete = topPathComplete && bottomPathComplete && bulbConnected;
+            const circuitComplete = topPathComplete && bottomPathComplete && batteryVWiresConnected && batteryLWiresConnected && bulbVWiresConnected && bulbLWiresConnected;
             console.log('Circuit complete:', circuitComplete);
             
             return circuitComplete;
@@ -2264,85 +2448,23 @@
         }
 
         function drawBatteryConnections() {
-            const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
-            
-            // Draw connection from battery positive terminal to top wire
-            const topWirePos = gridToWorld(gameState.battery.x + 1, gameState.battery.y - 1);
-            if (isConductive(gameState.battery.x + 1, gameState.battery.y - 1)) {
-                drawWireConnection(
-                    { x: batteryPos.x + 25, y: batteryPos.y - 15 }, // Battery positive terminal
-                    topWirePos,
-                    0xCD7F32, // Copper color
-                    4
-                );
-            }
-            
-            // Draw connection from battery negative terminal to bottom wire
-            const bottomWirePos = gridToWorld(gameState.battery.x + 1, gameState.battery.y + 1);
-            if (isConductive(gameState.battery.x + 1, gameState.battery.y + 1)) {
-                drawWireConnection(
-                    { x: batteryPos.x + 25, y: batteryPos.y + 15 }, // Battery negative terminal
-                    bottomWirePos,
-                    0xCD7F32, // Copper color
-                    4
-                );
-            }
+            // No extra connections needed - vertical wires at (2,3) and (2,7) are sufficient
+            // The vertical wires show that the battery is hooked up to the circuit
         }
 
         function drawBulbConnections() {
-            const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
-            
-            // Draw connection from top wire to bulb top terminal
-            const topWirePos = gridToWorld(gameState.bulb.x - 1, gameState.bulb.y - 1);
-            if (isConductive(gameState.bulb.x - 1, gameState.bulb.y - 1)) {
-                drawWireConnection(
-                    topWirePos,
-                    { x: bulbPos.x - 15, y: bulbPos.y - 15 }, // Bulb top terminal
-                    0xCD7F32, // Copper color
-                    4
-                );
-            }
-            
-            // Draw connection from bulb bottom terminal to bottom wire
-            const bottomWirePos = gridToWorld(gameState.bulb.x - 1, gameState.bulb.y + 1);
-            if (isConductive(gameState.bulb.x - 1, gameState.bulb.y + 1)) {
-                drawWireConnection(
-                    { x: bulbPos.x - 15, y: bulbPos.y + 15 }, // Bulb bottom terminal
-                    bottomWirePos,
-                    0xCD7F32, // Copper color
-                    4
-                );
-            }
+            // No extra connections needed - vertical wires at (12,3) and (12,7) are sufficient
+            // The vertical wires show that the light bulb is hooked up to the circuit
         }
 
         function drawConnectionsForItem(item) {
-            if (!item.placed || !item.conductive) return;
-            
-            const itemPos = gridToWorld(item.gridX, item.gridY);
-            const adjacentPositions = getAdjacentPositions(item.gridX, item.gridY);
-            
-            adjacentPositions.forEach(pos => {
-                if (isConductive(pos.x, pos.y)) {
-                    const adjacentPos = gridToWorld(pos.x, pos.y);
-                    drawWireConnection(itemPos, adjacentPos, 0xCD7F32, 3);
-                }
-            });
+            // Removed wire drawing for placed items to keep gap indicators clean
+            return;
         }
 
         function drawConnectionsForWire(wire) {
-            const wirePos = gridToWorld(wire.x, wire.y);
-            const adjacentPositions = getAdjacentPositions(wire.x, wire.y);
-            
-            adjacentPositions.forEach(pos => {
-                if (isConductive(pos.x, pos.y)) {
-                    const adjacentPos = gridToWorld(pos.x, pos.y);
-                    // Only draw if it's not another pre-placed wire (to avoid duplicate lines)
-                    const adjacentContent = getGridPosition(pos.x, pos.y);
-                    if (adjacentContent !== 'wire') {
-                        drawWireConnection(wirePos, adjacentPos, 0xCD7F32, 3);
-                    }
-                }
-            });
+            // Removed wire drawing to adjacent items to keep circuit clean
+            return;
         }
 
         function drawWireConnection(fromPos, toPos, color, lineWidth) {
@@ -2401,39 +2523,75 @@
             // Create a special graphics object for the complete path
             const pathGraphics = scene.add.graphics();
             pathGraphics.lineStyle(6, 0xFFD700, 0.6); // Golden color for active path
-            pathGraphics.setDepth(10); // Above other connections
+            pathGraphics.setDepth(8); // Behind battery and bulb (depth 10) but above wires (depth 5)
             
-            // Draw the complete circuit path
+            // Draw the complete circuit path including through battery and bulb
             const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
             
-            // Start from battery positive terminal
-            pathGraphics.moveTo(batteryPos.x + 25, batteryPos.y - 15);
+            // Start from battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
+            
+            // Connect vertically to vertical wire at (2,5), then to L-shaped wire at (2,4), then horizontally to top wire at (3,4)
+            const batteryVWirePos = gridToWorld(2, 5);
+            pathGraphics.lineTo(batteryVWirePos.x, batteryVWirePos.y);
+            const batteryLWirePos = gridToWorld(2, 4);
+            pathGraphics.lineTo(batteryLWirePos.x, batteryLWirePos.y);
+            const batteryTopWirePos = gridToWorld(3, 4);
+            pathGraphics.lineTo(batteryTopWirePos.x, batteryTopWirePos.y);
             
             // Trace through top wire to bulb
-            for (let x = gameState.battery.x + 1; x < gameState.bulb.x; x++) {
-                if (isConductive(x, gameState.battery.y - 1)) {
-                    const pos = gridToWorld(x, gameState.battery.y - 1);
+            for (let x = 3; x <= 11; x++) {
+                if (isConductive(x, 4)) { // Row 4 is top wire
+                    const pos = gridToWorld(x, 4);
                     pathGraphics.lineTo(pos.x, pos.y);
                 }
             }
             
-            // Connect to bulb top terminal
-            pathGraphics.lineTo(bulbPos.x - 15, bulbPos.y - 15);
+            // Connect horizontally from top wire to bulb L-shaped wire at (12,4)
+            const bulbTopLWirePos = gridToWorld(12, 4);
+            pathGraphics.lineTo(bulbTopLWirePos.x, bulbTopLWirePos.y);
             
-            // Through bulb to bottom terminal
-            pathGraphics.lineTo(bulbPos.x - 15, bulbPos.y + 15);
+            // Connect vertically to vertical wire at (12,5)
+            const bulbTopVWirePos = gridToWorld(12, 5);
+            pathGraphics.lineTo(bulbTopVWirePos.x, bulbTopVWirePos.y);
+            
+            // Connect to bulb (through the bulb component)
+            const bulbCenterPos = gridToWorld(gameState.bulb.x + 1, gameState.bulb.y + 1);
+            pathGraphics.lineTo(bulbCenterPos.x, bulbCenterPos.y);
+            
+            // Connect to vertical wire at (12,9)
+            const bulbBottomVWirePos = gridToWorld(12, 9);
+            pathGraphics.lineTo(bulbBottomVWirePos.x, bulbBottomVWirePos.y);
+            
+            // Connect vertically to bulb L-shaped wire at (12,10)
+            const bulbBottomLWirePos = gridToWorld(12, 10);
+            pathGraphics.lineTo(bulbBottomLWirePos.x, bulbBottomLWirePos.y);
+            
+            // Connect horizontally to bottom wire at (11,10)
+            const bulbBottomWirePos = gridToWorld(11, 10);
+            pathGraphics.lineTo(bulbBottomWirePos.x, bulbBottomWirePos.y);
             
             // Trace through bottom wire back to battery
-            for (let x = gameState.bulb.x - 1; x > gameState.battery.x; x--) {
-                if (isConductive(x, gameState.battery.y + 1)) {
-                    const pos = gridToWorld(x, gameState.battery.y + 1);
+            for (let x = 11; x >= 3; x--) {
+                if (isConductive(x, 10)) { // Row 10 is bottom wire
+                    const pos = gridToWorld(x, 10);
                     pathGraphics.lineTo(pos.x, pos.y);
                 }
             }
             
-            // End at battery negative terminal
-            pathGraphics.lineTo(batteryPos.x + 25, batteryPos.y + 15);
+            // Connect horizontally from bottom wire to battery L-shaped wire at (2,10)
+            const batteryBottomLWirePos = gridToWorld(2, 10);
+            pathGraphics.lineTo(batteryBottomLWirePos.x, batteryBottomLWirePos.y);
+            
+            // Connect vertically to vertical wire at (2,9)
+            const batteryBottomVWirePos = gridToWorld(2, 9);
+            pathGraphics.lineTo(batteryBottomVWirePos.x, batteryBottomVWirePos.y);
+            
+            // End vertically at battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
             
             pathGraphics.strokePath();
             
@@ -2504,12 +2662,12 @@
                 // Create yellow particle
                 const particle = scene.add.circle(startPosition.x, startPosition.y, 6, 0xFFFF00);
                 particle.setAlpha(1.0);
-                particle.setDepth(25);
+                particle.setDepth(8); // Behind battery and bulb (depth 10) but above wires (depth 5)
                 
                 // Create yellow glow effect
                 const glow = scene.add.circle(startPosition.x, startPosition.y, 12, 0xFFFF00);
                 glow.setAlpha(0.4);
-                glow.setDepth(24);
+                glow.setDepth(7); // Behind particle
                 
                 particles.push({ 
                     particle, 
@@ -2537,36 +2695,77 @@
             console.log('Battery position:', batteryPos);
             console.log('Bulb position:', bulbPos);
             
-            // Start at battery positive terminal
-            path.push({ x: batteryPos.x + 25, y: batteryPos.y - 15, isTerminal: true });
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Connection vertically to vertical wire at (2,5)
+            const batteryVWirePos = gridToWorld(2, 5);
+            path.push({ x: batteryVWirePos.x, y: batteryVWirePos.y, isWire: true });
+            
+            // Connection to L-shaped wire at (2,4)
+            const batteryLWirePos = gridToWorld(2, 4);
+            path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
+            
+            // Connection horizontally to top wire at (3,4)
+            const batteryTopWirePos = gridToWorld(3, 4);
+            path.push({ x: batteryTopWirePos.x, y: batteryTopWirePos.y, isWire: true });
             
             // Top wire (positive path) from battery to bulb
-            for (let x = gameState.battery.x + 1; x < gameState.bulb.x; x++) {
-                if (isConductive(x, gameState.battery.y - 1)) {
-                    const pos = gridToWorld(x, gameState.battery.y - 1);
+            for (let x = 3; x <= 11; x++) {
+                if (isConductive(x, 4)) { // Row 4 is top wire
+                    const pos = gridToWorld(x, 4);
                     path.push({ x: pos.x, y: pos.y, isWire: true });
                     console.log(`Added top wire position: (${pos.x}, ${pos.y})`);
                 }
             }
             
-            // Bulb top terminal
-            path.push({ x: bulbPos.x - 15, y: bulbPos.y - 15, isBulb: true });
+            // Connection horizontally from top wire to bulb L-shaped wire at (12,4)
+            const bulbTopLWirePos = gridToWorld(12, 4);
+            path.push({ x: bulbTopLWirePos.x, y: bulbTopLWirePos.y, isWire: true });
             
-            // Through bulb
-            path.push({ x: bulbPos.x - 15, y: bulbPos.y, isBulb: true });
-            path.push({ x: bulbPos.x - 15, y: bulbPos.y + 15, isBulb: true });
+            // Connection vertically to vertical wire at (12,5)
+            const bulbTopVWirePos = gridToWorld(12, 5);
+            path.push({ x: bulbTopVWirePos.x, y: bulbTopVWirePos.y, isWire: true });
+            
+            // Connection to bulb (through the bulb component)
+            const bulbCenterPos = gridToWorld(gameState.bulb.x + 1, gameState.bulb.y + 1);
+            path.push({ x: bulbCenterPos.x, y: bulbCenterPos.y, isBulb: true });
+            
+            // Connection to vertical wire at (12,9)
+            const bulbBottomVWirePos = gridToWorld(12, 9);
+            path.push({ x: bulbBottomVWirePos.x, y: bulbBottomVWirePos.y, isWire: true });
+            
+            // Connection vertically to bulb L-shaped wire at (12,10)
+            const bulbBottomLWirePos = gridToWorld(12, 10);
+            path.push({ x: bulbBottomLWirePos.x, y: bulbBottomLWirePos.y, isWire: true });
+            
+            // Connection horizontally to bottom wire at (11,10)
+            const bulbBottomWirePos = gridToWorld(11, 10);
+            path.push({ x: bulbBottomWirePos.x, y: bulbBottomWirePos.y, isWire: true });
             
             // Bottom wire (negative path) from bulb back to battery
-            for (let x = gameState.bulb.x - 1; x > gameState.battery.x; x--) {
-                if (isConductive(x, gameState.battery.y + 1)) {
-                    const pos = gridToWorld(x, gameState.battery.y + 1);
+            for (let x = 11; x >= 3; x--) {
+                if (isConductive(x, 10)) { // Row 10 is bottom wire
+                    const pos = gridToWorld(x, 10);
                     path.push({ x: pos.x, y: pos.y, isWire: true });
                     console.log(`Added bottom wire position: (${pos.x}, ${pos.y})`);
                 }
             }
             
-            // Battery negative terminal
-            path.push({ x: batteryPos.x + 25, y: batteryPos.y + 15, isTerminal: true });
+            // Connection horizontally from bottom wire to battery L-shaped wire at (2,10)
+            const batteryBottomLWirePos = gridToWorld(2, 10);
+            path.push({ x: batteryBottomLWirePos.x, y: batteryBottomLWirePos.y, isWire: true });
+            
+            // Connection vertically to vertical wire at (2,9)
+            const batteryBottomVWirePos = gridToWorld(2, 9);
+            path.push({ x: batteryBottomVWirePos.x, y: batteryBottomVWirePos.y, isWire: true });
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            // End at bottom wire near battery (skip battery terminal to avoid overlap)
             
             console.log(`Complete circuit path built with ${path.length} points`);
             return path;
@@ -2732,21 +2931,21 @@
             const path = [];
             
             // Top wire (positive path) - from battery to bulb
-            const topY = gameState.battery.y - 1; // Row 3
-            for (let x = gameState.battery.x + 1; x <= gameState.bulb.x; x++) {
+            const topY = 4; // Row 4 is top wire
+            for (let x = 3; x <= 11; x++) {
                 if (isConductive(x, topY)) {
                     path.push({x: x, y: topY});
                 }
             }
             
-            // Through the bulb (if both connections are conductive)
-            if (isConductive(gameState.bulb.x, topY) && isConductive(gameState.bulb.x, gameState.battery.y + 1)) {
-                path.push({x: gameState.bulb.x, y: gameState.bulb.y}); // Bulb center
+            // Through the bulb (if both vertical wire connections are conductive)
+            if (isConductive(12, 5) && isConductive(12, 9)) {
+                path.push({x: gameState.bulb.x + 1, y: gameState.bulb.y + 1}); // Bulb center (3x3)
             }
             
             // Bottom wire (negative path) - from bulb back to battery
-            const bottomY = gameState.battery.y + 1; // Row 5
-            for (let x = gameState.bulb.x; x >= gameState.battery.x + 1; x--) {
+            const bottomY = 10; // Row 10 is bottom wire
+            for (let x = 11; x >= 3; x--) {
                 if (isConductive(x, bottomY)) {
                     path.push({x: x, y: bottomY});
                 }

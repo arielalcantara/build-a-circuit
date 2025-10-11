@@ -212,7 +212,7 @@
 
 - [x] 17. Replace game items with image assets
 
-
+y
 
 
 
@@ -229,6 +229,7 @@
   - _Requirements: 2.4, 4.1_
 
 - [-] 18. Implement multi-stage system and stage progression
+
 
   - Create stage management system to track current stage
   - Add stage configuration objects for different circuit layouts
@@ -261,7 +262,17 @@
   - Maintain visual clarity when showing multiple conductive routes simultaneously
   - _Requirements: 16.2, 16.7, 16.8_
 
-- [ ]* 22. Add educational enhancements and additional features
+- [x] 22. Fix drag preview scaling to maintain original item size
+
+
+
+  - Remove the scale(0.9) transformation from the drag preview creation
+  - Ensure drag preview uses full size (1.0 scale) to match original item dimensions
+  - Update createDragPreview function to maintain consistent item sizing during drag operations
+  - Verify that multi-cell items maintain proper proportions during drag
+  - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
+
+- [ ]* 23. Add educational enhancements and additional features
   - Include explanatory text about conductors and insulators
   - Add sound effects for interactions and success
   - Create additional difficulty levels with different circuit layouts

@@ -222,3 +222,15 @@ This feature involves creating an educational game for children to learn about e
 5. WHEN I am in Stage 2 THEN the system SHALL evaluate circuits using the same electrical flow principles as Stage 1
 6. WHEN I complete Stage 2 THEN the system SHALL display the same success modal format as Stage 1
 7. WHEN I use the reset button in any stage THEN the system SHALL reset only the current stage without affecting stage progression
+
+### Requirement 18
+
+**User Story:** As a child dragging items from the item bank, I want the items to maintain their original size during drag operations, so that I can clearly see what I'm placing without visual distraction.
+
+#### Acceptance Criteria
+
+1. WHEN I start dragging an item from the item bank THEN the system SHALL maintain the item's original size in the drag preview
+2. WHEN the drag preview is displayed THEN the system SHALL NOT apply any scaling transformations that reduce the item size
+3. WHEN dragging items THEN the system SHALL ensure the drag preview accurately represents the size of the item being placed
+4. WHEN the drag preview is created THEN the system SHALL use the same visual dimensions as the original item in the bank
+5. WHEN dragging multi-cell items THEN the system SHALL maintain proper proportions without size reduction
