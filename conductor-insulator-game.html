@@ -245,7 +245,8 @@
             max-width: 500px;
             max-height: 80vh;
             overflow-y: auto;
-            animation: slideIn 0.4s ease-out;
+            opacity: 0;
+            animation: slideIn 0.4s ease-out forwards;
         }
         
         #success-content h2 {
@@ -318,11 +319,11 @@
         @keyframes slideIn {
             from { 
                 opacity: 0;
-                transform: translate(-50%, -60%);
+                transform: translate(-50%, -60%) scale(0.8);
             }
             to { 
                 opacity: 1;
-                transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%) scale(1);
             }
         }
         
@@ -532,12 +533,56 @@
         };
 
         function preload() {
-            // We'll create simple colored rectangles instead of loading images
             scene = this;
+            
+            // Add loading progress feedback
+            scene.load.on('progress', function (value) {
+                console.log('Loading progress:', value);
+            });
+            
+            scene.load.on('complete', function () {
+                console.log('All assets loaded successfully');
+            });
+            
+            scene.load.on('loaderror', function (file) {
+                console.error('Failed to load:', file.src);
+            });
+            
+            // Load image assets
+            scene.load.image('battery', 'assets/items/battery.png');
+            scene.load.spritesheet('lightbulb', 'assets/items/light-bulb.png', { frameWidth: 300, frameHeight: 300 });
+            
+            // Load item bank images
+            scene.load.image('coin', 'assets/items/coin.png');
+            scene.load.image('bottlecap', 'assets/items/bottlecap.png');
+            scene.load.image('key', 'assets/items/key.png');
+            scene.load.image('paperclip', 'assets/items/paperclip.png');
+            scene.load.image('spoon', 'assets/items/spoon.png');
+            scene.load.image('ruler', 'assets/items/ruler.png');
+            scene.load.image('lego', 'assets/items/lego.png');
+            scene.load.image('pebble', 'assets/items/pebble.png');
+            scene.load.image('button', 'assets/items/button.png');
+            scene.load.image('eraser', 'assets/items/eraser.png');
+            scene.load.image('rubberband', 'assets/items/rubberband.png');
+            scene.load.image('popsiclestick', 'assets/items/popsiclestick.png');
+            scene.load.image('straw', 'assets/items/straw.png');
         }
 
         function create() {
             console.log('Game scene created');
+            
+            // Check if all textures loaded correctly
+            console.log('Available textures:', Object.keys(scene.textures.list));
+            
+            // Verify specific textures we need
+            const requiredTextures = ['coin', 'bottlecap', 'key', 'paperclip', 'spoon', 'ruler', 'lego', 'pebble', 'button', 'eraser', 'rubberband', 'popsiclestick', 'straw'];
+            requiredTextures.forEach(textureKey => {
+                if (scene.textures.exists(textureKey)) {
+                    console.log('✓ Texture loaded:', textureKey);
+                } else {
+                    console.error('✗ Texture missing:', textureKey);
+                }
+            });
             
             // Initialize the grid
             initializeGrid();
@@ -556,6 +601,9 @@
             
             // Initialize wire connections
             updateWireConnections();
+            
+            // Start position updater for HTML elements
+            startPositionUpdater();
         }
 
         function update() {
@@ -623,15 +671,18 @@
         function createBattery() {
             const pos = gridToWorld(gameState.battery.x, gameState.battery.y);
             
-            // Create battery body (taller to span both wire levels)
-            const batteryBody = scene.add.rectangle(pos.x, pos.y, 50, 50, 0x333333);
-            batteryBody.setStrokeStyle(2, 0x000000);
-            
-            // Add positive terminal (connects to top wire)
-            const positiveTerminal = scene.add.rectangle(pos.x + 25, pos.y - 15, 8, 15, 0xFF0000);
-            
-            // Add negative terminal (connects to bottom wire)
-            const negativeTerminal = scene.add.rectangle(pos.x + 25, pos.y + 15, 8, 10, 0x000000);
+            // Create battery using image asset
+            let batteryImage;
+            if (scene.textures.exists('battery')) {
+                batteryImage = scene.add.image(pos.x, pos.y, 'battery');
+                batteryImage.setDisplaySize(50, 50);
+                console.log('Battery image created successfully');
+            } else {
+                console.error('Battery texture not found, creating fallback');
+                // Create fallback colored rectangle
+                batteryImage = scene.add.rectangle(pos.x, pos.y, 50, 50, 0x333333);
+                batteryImage.setStrokeStyle(2, 0x000000);
+            }
             
             // Add connection wires from terminals
             const positiveWire = scene.add.rectangle(pos.x + 35, pos.y - 15, 20, 4, 0xCD7F32);
@@ -657,8 +708,7 @@
             
             // Group all battery components
             gameState.battery.sprite = scene.add.group([
-                batteryBody, positiveTerminal, negativeTerminal, 
-                positiveWire, negativeWire,
+                batteryImage, positiveWire, negativeWire,
                 positiveLabel, negativeLabel, batteryLabel
             ]);
             
@@ -672,14 +722,19 @@
         function createLightBulb() {
             const pos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
             
-            // Create bulb base
-            const bulbBase = scene.add.rectangle(pos.x, pos.y, 30, 40, 0x8B4513);
-            bulbBase.setStrokeStyle(2, 0x000000);
-            
-            // Create bulb glass (will change color when lit)
-            const bulbGlass = scene.add.circle(pos.x, pos.y - 10, 15, 0xFFFFFF);
-            bulbGlass.setStrokeStyle(2, 0x000000);
-            bulbGlass.setAlpha(0.8);
+            // Create light bulb using spritesheet (frame 0 = off, frame 1 = on)
+            let bulbSprite;
+            if (scene.textures.exists('lightbulb')) {
+                bulbSprite = scene.add.sprite(pos.x, pos.y, 'lightbulb', 0);
+                bulbSprite.setDisplaySize(50, 50);
+                console.log('Light bulb sprite created successfully');
+            } else {
+                console.error('Light bulb texture not found, creating fallback');
+                // Create fallback colored circle
+                bulbSprite = scene.add.circle(pos.x, pos.y - 10, 15, 0xFFFFFF);
+                bulbSprite.setStrokeStyle(2, 0x000000);
+                bulbSprite.setAlpha(0.8);
+            }
             
             // Add connection wires to both top and bottom circuits
             const topConnection = scene.add.rectangle(pos.x - 25, pos.y - 15, 20, 4, 0xCD7F32);
@@ -696,10 +751,10 @@
             
             // Store references for later use
             gameState.bulb.sprite = scene.add.group([
-                bulbBase, bulbGlass, topConnection, bottomConnection,
+                bulbSprite, topConnection, bottomConnection,
                 topTerminal, bottomTerminal, bulbLabel
             ]);
-            gameState.bulb.glassSprite = bulbGlass;
+            gameState.bulb.bulbSprite = bulbSprite;
             
             // Mark bulb position in grid
             setGridPosition(gameState.bulb.x, gameState.bulb.y, 'bulb');
@@ -732,8 +787,6 @@
 
         function markGaps() {
             gameState.gaps.forEach(gap => {
-                const pos = gridToWorld(gap.x, gap.y);
-                
                 // Calculate gap size based on the gap's size property
                 const gapSize = gap.size || { width: 1, height: 1 };
                 const cellSize = gameState.cellSize;
@@ -742,15 +795,11 @@
                 const graphics = scene.add.graphics();
                 graphics.lineStyle(2, 0xFF6B6B, 0.8);
                 
-                // Calculate proper center position for multi-cell gaps
-                const centerX = pos.x + (cellSize * (gapSize.width - 1)) / 2;
-                const centerY = pos.y + (cellSize * (gapSize.height - 1)) / 2;
-                
-                // Draw dashed rectangle based on gap size
-                const width = (cellSize * gapSize.width) - 10;
-                const height = (cellSize * gapSize.height) - 10;
-                const x = centerX - width / 2;
-                const y = centerY - height / 2;
+                // Calculate position - use top-left corner of grid cell, not center
+                const x = gap.x * cellSize;
+                const y = gap.y * cellSize;
+                const width = cellSize * gapSize.width;
+                const height = cellSize * gapSize.height;
                 const dashLength = 5;
                 const gapLength = 5;
                 
@@ -797,25 +846,25 @@
         }
 
         function updateLightBulb(isLit) {
-            if (gameState.bulb.glassSprite) {
+            if (gameState.bulb.bulbSprite) {
                 if (isLit) {
-                    gameState.bulb.glassSprite.setFillStyle(0xFFFF00); // Yellow when lit
-                    gameState.bulb.glassSprite.setAlpha(1.0);
+                    // Use frame 1 (right half) for lit state
+                    gameState.bulb.bulbSprite.setFrame(1);
                     
                     // Add glow effect
                     if (!gameState.bulb.glowEffect) {
                         gameState.bulb.glowEffect = scene.add.circle(
-                            gameState.bulb.glassSprite.x, 
-                            gameState.bulb.glassSprite.y, 
-                            25, 0xFFFF00
+                            gameState.bulb.bulbSprite.x, 
+                            gameState.bulb.bulbSprite.y, 
+                            35, 0xFFFF00
                         );
                         gameState.bulb.glowEffect.setAlpha(0.3);
                         gameState.bulb.glowEffect.setDepth(-1);
                     }
                     gameState.bulb.glowEffect.setVisible(true);
                 } else {
-                    gameState.bulb.glassSprite.setFillStyle(0xFFFFFF); // White when off
-                    gameState.bulb.glassSprite.setAlpha(0.8);
+                    // Use frame 0 (left half) for off state
+                    gameState.bulb.bulbSprite.setFrame(0);
                     
                     if (gameState.bulb.glowEffect) {
                         gameState.bulb.glowEffect.setVisible(false);
@@ -832,102 +881,120 @@
             const itemDefinitions = [
                 // Conductors
                 {
-                    id: 'soda_bottle_cap',
-                    name: 'Soda Bottle Cap',
+                    id: 'coin',
+                    name: 'Copper Coin',
                     type: 'conductor',
                     conductive: true,
-                    color: '#FF6B35',
+                    imageKey: 'coin',
                     size: { width: 1, height: 1 },
-                    quantity: 2
+                    quantity: 1
                 },
                 {
-                    id: 'metal_key',
+                    id: 'bottlecap',
+                    name: 'Bottle Cap',
+                    type: 'conductor',
+                    conductive: true,
+                    imageKey: 'bottlecap',
+                    size: { width: 1, height: 1 },
+                    quantity: 1
+                },
+                {
+                    id: 'key',
                     name: 'Metal Key',
                     type: 'conductor',
                     conductive: true,
-                    color: '#C0C0C0',
+                    imageKey: 'key',
                     size: { width: 2, height: 1 },
-                    quantity: 2
+                    quantity: 1
                 },
                 {
-                    id: 'paper_clip',
+                    id: 'paperclip',
                     name: 'Paper Clip',
                     type: 'conductor',
                     conductive: true,
-                    color: '#B8B8B8',
+                    imageKey: 'paperclip',
                     size: { width: 2, height: 1 },
-                    quantity: 2
+                    quantity: 1
                 },
                 {
                     id: 'spoon',
                     name: 'Spoon',
                     type: 'conductor',
                     conductive: true,
-                    color: '#E5E5E5',
+                    imageKey: 'spoon',
                     size: { width: 3, height: 1 },
                     quantity: 1
                 },
                 {
-                    id: 'metal_ruler',
+                    id: 'ruler',
                     name: 'Metal Ruler',
                     type: 'conductor',
                     conductive: true,
-                    color: '#A8A8A8',
+                    imageKey: 'ruler',
                     size: { width: 3, height: 1 },
                     quantity: 1
                 },
                 // Insulators
                 {
-                    id: 'lego_brick',
+                    id: 'lego',
                     name: 'Lego Brick',
                     type: 'insulator',
                     conductive: false,
-                    color: '#FF0000',
+                    imageKey: 'lego',
                     size: { width: 1, height: 1 },
-                    quantity: 2
+                    quantity: 1
                 },
                 {
                     id: 'pebble',
                     name: 'Pebble',
                     type: 'insulator',
                     conductive: false,
-                    color: '#8B7355',
+                    imageKey: 'pebble',
                     size: { width: 1, height: 1 },
-                    quantity: 2
+                    quantity: 1
+                },
+                {
+                    id: 'button',
+                    name: 'Button',
+                    type: 'insulator',
+                    conductive: false,
+                    imageKey: 'button',
+                    size: { width: 1, height: 1 },
+                    quantity: 1
                 },
                 {
                     id: 'eraser',
                     name: 'Eraser',
                     type: 'insulator',
                     conductive: false,
-                    color: '#FF69B4',
+                    imageKey: 'eraser',
                     size: { width: 2, height: 1 },
-                    quantity: 2
+                    quantity: 1
                 },
                 {
-                    id: 'rubber_band',
+                    id: 'rubberband',
                     name: 'Rubber Band',
                     type: 'insulator',
                     conductive: false,
-                    color: '#8B4513',
+                    imageKey: 'rubberband',
                     size: { width: 2, height: 1 },
-                    quantity: 2
+                    quantity: 1
                 },
                 {
-                    id: 'popsicle_stick',
+                    id: 'popsiclestick',
                     name: 'Popsicle Stick',
                     type: 'insulator',
                     conductive: false,
-                    color: '#DEB887',
+                    imageKey: 'popsiclestick',
                     size: { width: 3, height: 1 },
                     quantity: 1
                 },
                 {
-                    id: 'drinking_straw',
-                    name: 'Drinking Straw',
+                    id: 'straw',
+                    name: 'Straw',
                     type: 'insulator',
                     conductive: false,
-                    color: '#FFD700',
+                    imageKey: 'straw',
                     size: { width: 3, height: 1 },
                     quantity: 1
                 }
@@ -952,7 +1019,7 @@
                 name: definition.name,
                 type: definition.type,
                 conductive: definition.conductive,
-                color: definition.color,
+                imageKey: definition.imageKey,
                 size: definition.size || { width: 1, height: 1 },
                 inBank: true,
                 placed: false,
@@ -976,37 +1043,16 @@
             itemDiv.style.cssText = `
                 width: ${width}px;
                 height: ${height}px;
-                background-color: ${item.color};
-                border: 2px solid #333;
-                border-radius: 5px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
                 cursor: grab;
                 user-select: none;
                 transition: transform 0.2s, box-shadow 0.2s;
                 margin: 2px;
                 position: relative;
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                background-image: url('assets/items/${item.imageKey}.png');
             `;
-            
-            // Add item name (smaller font for longer items)
-            const fontSize = item.size.width > 2 ? '8px' : '10px';
-            const nameLabel = document.createElement('div');
-            nameLabel.style.cssText = `
-                color: white;
-                font-size: ${fontSize};
-                text-align: center;
-                font-weight: bold;
-                text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-                line-height: 12px;
-                padding: 2px;
-                word-wrap: break-word;
-                max-width: ${width - 10}px;
-            `;
-            nameLabel.textContent = item.name;
-            
-            itemDiv.appendChild(nameLabel);
             
             // Create tooltip
             const tooltip = document.createElement('div');
@@ -1107,48 +1153,90 @@
         }
 
         function createGameSprite(item, x, y) {
-            const pos = gridToWorld(x, y);
-            
-            // Calculate sprite size based on item size
+            // Calculate sprite size based on item size - occupy full grid cell(s)
             const cellSize = gameState.cellSize;
-            const spriteWidth = (cellSize * item.size.width) - 10;
-            const spriteHeight = (cellSize * item.size.height) - 10;
+            const spriteWidth = cellSize * item.size.width;
+            const spriteHeight = cellSize * item.size.height;
             
-            // Adjust position for multi-cell items to center them properly within their grid space
-            const adjustedX = pos.x + (cellSize * (item.size.width - 1)) / 2;
-            const adjustedY = pos.y + (cellSize * (item.size.height - 1)) / 2;
+            // Position items to align with grid cells - use top-left corner like gap indicators
+            const adjustedX = x * cellSize;
+            const adjustedY = y * cellSize;
             
-            // Create the main item sprite
-            const itemSprite = scene.add.rectangle(adjustedX, adjustedY, spriteWidth, spriteHeight, item.color);
-            itemSprite.setStrokeStyle(2, 0x000000);
+            // Create HTML element for the circuit item positioned relative to canvas
+            const canvas = document.querySelector('canvas');
+            const canvasContainer = canvas.parentElement;
+            
+            // Ensure canvas container has relative positioning
+            if (canvasContainer && canvasContainer.style.position !== 'relative') {
+                canvasContainer.style.position = 'relative';
+            }
+            
+            const itemElement = document.createElement('div');
+            itemElement.style.cssText = `
+                position: absolute;
+                left: ${adjustedX}px;
+                top: ${adjustedY}px;
+                width: ${spriteWidth}px;
+                height: ${spriteHeight}px;
+                background-image: url('assets/items/${item.imageKey}.png');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                pointer-events: none;
+                z-index: 10;
+                cursor: pointer;
+            `;
+            
+            // Append to canvas container instead of body
+            if (canvasContainer) {
+                canvasContainer.appendChild(itemElement);
+            } else {
+                // Fallback to canvas parent or body
+                canvas.parentNode.appendChild(itemElement);
+            }
+            
+            // Create an invisible Phaser sprite for interaction handling (centered for Phaser)
+            const phaserCenterX = adjustedX + spriteWidth/2;
+            const phaserCenterY = adjustedY + spriteHeight/2;
+            const itemSprite = scene.add.rectangle(phaserCenterX, phaserCenterY, spriteWidth, spriteHeight, 0x000000, 0.01);
+            itemSprite.htmlElement = itemElement;
+            
+            // Store positioning function for updates
+            itemSprite.updateHtmlPosition = function() {
+                if (this.htmlElement) {
+                    // Convert Phaser center position to HTML top-left position relative to canvas
+                    this.htmlElement.style.left = (this.x - spriteWidth/2) + 'px';
+                    this.htmlElement.style.top = (this.y - spriteHeight/2) + 'px';
+                }
+            };
+            
+            // Set initial position correctly
+            setTimeout(() => {
+                itemSprite.updateHtmlPosition();
+            }, 10);
             
             // Size indicator and text removed for cleaner visual design
             
-            // Add text label with better styling and positioning
-            const labelBackground = scene.add.rectangle(adjustedX, adjustedY - spriteHeight/2 - 15, item.name.length * 6 + 10, 16, 0xFFFFFF);
-            labelBackground.setStrokeStyle(1, 0x333333);
-            labelBackground.setAlpha(0.9);
-            
-            const label = scene.add.text(adjustedX, adjustedY - spriteHeight/2 - 15, item.name.toUpperCase(), {
-                fontSize: '8px',
-                fill: '#333333',
-                fontWeight: 'bold'
-            }).setOrigin(0.5);
-            
             // Store original position and dimensions for drag distance calculation
-            item.originalX = adjustedX;
-            item.originalY = adjustedY;
+            item.originalX = phaserCenterX;
+            item.originalY = phaserCenterY;
             item.originalGridX = x;
             item.originalGridY = y;
             item.spriteHeight = spriteHeight;
             
             // Only make draggable if it's not a pre-placed component
             if (!isPreplacedComponent(x, y)) {
-                itemSprite.setInteractive({ draggable: true });
+                itemSprite.setInteractive({ 
+                    draggable: true,
+                    useHandCursor: true
+                });
                 
                 // Add removal hint on hover
                 itemSprite.on('pointerover', function() {
-                    this.setStrokeStyle(3, 0xFF6B6B);
+                    if (this.htmlElement) {
+                        this.htmlElement.style.filter = 'brightness(0.7) sepia(1) hue-rotate(0deg) saturate(2)';
+                        this.htmlElement.style.cursor = 'grab';
+                    }
                     // Show tooltip hint
                     if (!item.isDragging) {
                         showFeedback('💡 Tip: Drag this item away to remove it from the circuit!', 'info');
@@ -1156,8 +1244,9 @@
                 });
                 
                 itemSprite.on('pointerout', function() {
-                    if (!item.isDragging) {
-                        this.setStrokeStyle(2, 0x000000);
+                    if (!item.isDragging && this.htmlElement) {
+                        this.htmlElement.style.filter = 'none';
+                        this.htmlElement.style.cursor = 'pointer';
                     }
                 });
                 
@@ -1167,13 +1256,11 @@
                     item.isDragging = true;
                     
                     // Visual feedback - make semi-transparent and bring to front
-                    this.setAlpha(0.8);
-                    this.setDepth(1000);
-                    labelBackground.setDepth(1000);
-                    label.setDepth(1000);
-                    
-                    // Change stroke to indicate dragging
-                    this.setStrokeStyle(3, 0xFF6B6B);
+                    if (this.htmlElement) {
+                        this.htmlElement.style.opacity = '0.8';
+                        this.htmlElement.style.zIndex = '1000';
+                        this.htmlElement.style.filter = 'brightness(0.7) sepia(1) hue-rotate(0deg) saturate(2)';
+                    }
                     
                     // Show initial drag feedback
                     showFeedback('Drag away from circuit to remove item', 'info');
@@ -1183,10 +1270,12 @@
                     // Update positions
                     this.x = dragX;
                     this.y = dragY;
-                    labelBackground.x = dragX;
-                    labelBackground.y = dragY - item.spriteHeight/2 - 15;
-                    label.x = dragX;
-                    label.y = dragY - item.spriteHeight/2 - 15;
+                    
+                    // Update HTML element position (relative to canvas)
+                    if (this.htmlElement) {
+                        this.htmlElement.style.left = (dragX - spriteWidth/2) + 'px';
+                        this.htmlElement.style.top = (dragY - spriteHeight/2) + 'px';
+                    }
                     
                     // Enhanced distance threshold detection
                     const distance = Phaser.Math.Distance.Between(
@@ -1197,8 +1286,10 @@
                     
                     if (distance > REMOVAL_THRESHOLD) {
                         // Visual feedback for removal zone
-                        this.setStrokeStyle(4, 0xFF0000);
-                        this.setAlpha(0.6);
+                        if (this.htmlElement) {
+                            this.htmlElement.style.filter = 'brightness(0.5) sepia(1) hue-rotate(0deg) saturate(3)';
+                            this.htmlElement.style.opacity = '0.6';
+                        }
                         
                         // Show removal hint with icon
                         if (!item.removalHint) {
@@ -1217,8 +1308,10 @@
                         showFeedback('Release to remove item from circuit', 'error');
                     } else {
                         // Normal drag visual feedback
-                        this.setStrokeStyle(3, 0xFF6B6B);
-                        this.setAlpha(0.8);
+                        if (this.htmlElement) {
+                            this.htmlElement.style.filter = 'brightness(0.7) sepia(1) hue-rotate(0deg) saturate(2)';
+                            this.htmlElement.style.opacity = '0.8';
+                        }
                         
                         // Hide removal hint
                         if (item.removalHint) {
@@ -1257,6 +1350,13 @@
                         // Disable dragging to prevent further interaction
                         this.disableInteractive();
                         
+                        // Immediately clean up HTML element at current drag position
+                        if (this.htmlElement) {
+                            console.log('Removing HTML element at drag end position');
+                            this.htmlElement.remove();
+                            this.htmlElement = null;
+                        }
+                        
                         // Enhanced return to bank with animation (handles gap state internally)
                         returnItemToBank(item);
                         
@@ -1269,32 +1369,22 @@
                             x: item.originalX,
                             y: item.originalY,
                             duration: 300,
-                            ease: 'Back.easeOut'
-                        });
-                        
-                        // Animate label background and text back to position
-                        scene.tweens.add({
-                            targets: labelBackground,
-                            x: item.originalX,
-                            y: item.originalY - item.spriteHeight/2 - 15,
-                            duration: 300,
-                            ease: 'Back.easeOut'
-                        });
-                        
-                        scene.tweens.add({
-                            targets: label,
-                            x: item.originalX,
-                            y: item.originalY - item.spriteHeight/2 - 15,
-                            duration: 300,
-                            ease: 'Back.easeOut'
+                            ease: 'Back.easeOut',
+                            onUpdate: () => {
+                                // Update HTML element position during animation (relative to canvas)
+                                if (this.htmlElement) {
+                                    this.htmlElement.style.left = (this.x - spriteWidth/2) + 'px';
+                                    this.htmlElement.style.top = (this.y - spriteHeight/2) + 'px';
+                                }
+                            }
                         });
                         
                         // Reset visual state
-                        this.setStrokeStyle(2, 0x000000);
-                        this.setAlpha(1.0);
-                        this.setDepth(0);
-                        labelBackground.setDepth(0);
-                        label.setDepth(0);
+                        if (this.htmlElement) {
+                            this.htmlElement.style.filter = 'none';
+                            this.htmlElement.style.opacity = '1.0';
+                            this.htmlElement.style.zIndex = '10';
+                        }
                         
                         // Show feedback
                         showFeedback('Item returned to position. Drag further to remove.', 'info');
@@ -1308,17 +1398,21 @@
                 });
                 
                 itemSprite.on('pointerover', function() {
-                    this.setStrokeStyle(3, 0xFFAA00);
+                    if (this.htmlElement) {
+                        this.htmlElement.style.filter = 'brightness(1.2) sepia(0.3) hue-rotate(30deg)';
+                    }
                     showFeedback('This is a pre-placed component and cannot be removed', 'info');
                 });
                 
                 itemSprite.on('pointerout', function() {
-                    this.setStrokeStyle(2, 0x000000);
+                    if (this.htmlElement) {
+                        this.htmlElement.style.filter = 'none';
+                    }
                 });
             }
             
             // Group all components
-            const spriteGroup = scene.add.group([itemSprite, labelBackground, label]);
+            const spriteGroup = scene.add.group([itemSprite]);
             
             // Store references
             item.sprite = spriteGroup;
@@ -1333,6 +1427,42 @@
             // Store the original grid position before clearing item state
             const originalGridX = item.gridX >= 0 ? item.gridX : item.originalGridX;
             const originalGridY = item.gridY >= 0 ? item.gridY : item.originalGridY;
+            
+            // Clean up HTML element if it exists - multiple approaches for robustness
+            let htmlElementRemoved = false;
+            
+            if (item.sprite && item.sprite.htmlElement) {
+                console.log('Removing HTML element for item:', item.name);
+                item.sprite.htmlElement.remove();
+                item.sprite.htmlElement = null;
+                htmlElementRemoved = true;
+            }
+            
+            // Fallback: search for and remove any HTML elements at the original position
+            if (!htmlElementRemoved) {
+                const canvas = document.querySelector('canvas');
+                const canvasContainer = canvas.parentElement;
+                if (canvasContainer) {
+                    const itemElements = canvasContainer.querySelectorAll('div[style*="background-image"][style*="assets/items"]');
+                    itemElements.forEach(element => {
+                        // Check if this element is positioned at the item's location
+                        const elementLeft = parseInt(element.style.left);
+                        const elementTop = parseInt(element.style.top);
+                        const expectedLeft = originalGridX * gameState.cellSize;
+                        const expectedTop = originalGridY * gameState.cellSize;
+                        
+                        if (Math.abs(elementLeft - expectedLeft) < 10 && Math.abs(elementTop - expectedTop) < 10) {
+                            console.log('Removing HTML element by position match');
+                            element.remove();
+                            htmlElementRemoved = true;
+                        }
+                    });
+                }
+            }
+            
+            if (!htmlElementRemoved) {
+                console.warn('No HTML element found to remove for item:', item.name);
+            }
             
             // Immediately destroy the sprite to prevent visual duplication
             if (item.sprite && item.mainSprite) {
@@ -1427,18 +1557,33 @@
                 setGridPosition(originalGridX, originalGridY, null);
             }
             
-            // Handle gap state - only show gap indicator if this was actually a gap position
-            const gap = gameState.gaps.find(g => 
-                g.x === originalGridX && g.y === originalGridY
-            );
+            // Handle gap state - find gap that contains this position (for multi-cell items)
+            const gap = gameState.gaps.find(g => {
+                const gapSize = g.size || { width: 1, height: 1 };
+                return originalGridX >= g.x && 
+                       originalGridX < g.x + gapSize.width &&
+                       originalGridY >= g.y && 
+                       originalGridY < g.y + gapSize.height;
+            });
+            
             if (gap) {
                 gap.filled = false;
+                gap.filledWith = null;
                 if (gap.sprite) {
                     gap.sprite.setVisible(true);
                 }
-                console.log('Gap indicator restored for position:', originalGridX, originalGridY);
+                
+                // Clear all grid positions for this gap
+                const gapSize = gap.size || { width: 1, height: 1 };
+                for (let dy = 0; dy < gapSize.height; dy++) {
+                    for (let dx = 0; dx < gapSize.width; dx++) {
+                        setGridPosition(gap.x + dx, gap.y + dy, 'gap');
+                    }
+                }
+                
+                console.log('Gap indicator restored for gap at:', gap.x, gap.y, 'size:', gapSize);
             } else {
-                console.log('No gap found at position:', originalGridX, originalGridY, '- this is correct for non-gap positions');
+                console.log('No gap found containing position:', originalGridX, originalGridY);
             }
             
             // Ensure all drop zone highlights are cleared (removes green highlighting)
@@ -1477,11 +1622,21 @@
                 }, 1000);
             }
             
+            // Remove from placed items array
+            const itemIndex = gameState.placedItems.indexOf(item);
+            if (itemIndex > -1) {
+                gameState.placedItems.splice(itemIndex, 1);
+                console.log('Removed item from placedItems array');
+            }
+            
             // Update wire connections when item is removed
             updateWireConnections();
             
             // Stop current flow animation since circuit is now incomplete
             visualizeCurrentFlow(false);
+            
+            // Re-evaluate circuit to turn off bulb if circuit is now broken
+            evaluateCircuit();
             
             console.log('Item successfully returned to bank');
         }
@@ -1542,6 +1697,27 @@
             
             // Set up placed item interaction
             setupPlacedItemInteraction();
+            
+            // Set up window resize handler to keep HTML elements positioned correctly
+            window.addEventListener('resize', updateAllHtmlPositions);
+        }
+        
+        function updateAllHtmlPositions() {
+            // Update positions of all placed items
+            gameState.placedItems.forEach(item => {
+                if (item.sprite && item.sprite.updateHtmlPosition) {
+                    item.sprite.updateHtmlPosition();
+                }
+            });
+        }
+        
+
+        
+        // Add a more frequent position update to handle any timing issues
+        function startPositionUpdater() {
+            setInterval(() => {
+                updateAllHtmlPositions();
+            }, 100); // Update every 100ms to catch any positioning issues
         }
 
         function setupItemBankDragDrop() {
@@ -1577,15 +1753,23 @@
         }
 
         function createDragPreview(item, x, y) {
+            // Calculate preview size based on item's actual grid size
+            const cellSize = gameState.cellSize;
+            const previewWidth = (cellSize * item.size.width) * 0.8; // Slightly smaller for preview
+            const previewHeight = (cellSize * item.size.height) * 0.8;
+            
             const preview = document.createElement('div');
             preview.id = 'drag-preview';
             preview.style.cssText = `
                 position: fixed;
-                left: ${x - 40}px;
-                top: ${y - 30}px;
-                width: 80px;
-                height: 60px;
-                background-color: ${item.color};
+                left: ${x - previewWidth/2}px;
+                top: ${y - previewHeight/2}px;
+                width: ${previewWidth}px;
+                height: ${previewHeight}px;
+                background-image: url('assets/items/${item.imageKey}.png');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
                 border: 2px solid #333;
                 border-radius: 5px;
                 opacity: 0.8;
@@ -1598,35 +1782,7 @@
                 transform: scale(0.9);
             `;
             
-            // Add type indicator
-            const typeIndicator = document.createElement('div');
-            typeIndicator.style.cssText = `
-                width: 100%;
-                height: 15px;
-                background-color: ${item.conductive ? '#4CAF50' : '#F44336'};
-                color: white;
-                font-size: 8px;
-                text-align: center;
-                line-height: 15px;
-                font-weight: bold;
-                margin-bottom: 2px;
-            `;
-            typeIndicator.textContent = item.conductive ? 'CONDUCTOR' : 'INSULATOR';
-            
-            // Add item name
-            const nameLabel = document.createElement('div');
-            nameLabel.style.cssText = `
-                color: white;
-                font-size: 10px;
-                text-align: center;
-                font-weight: bold;
-                text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-                line-height: 12px;
-            `;
-            nameLabel.textContent = item.name;
-            
-            preview.appendChild(typeIndicator);
-            preview.appendChild(nameLabel);
+            // No labels needed - just the image background
             
             document.body.appendChild(preview);
         }
@@ -1637,8 +1793,10 @@
             // Update drag preview position
             const preview = document.getElementById('drag-preview');
             if (preview) {
-                preview.style.left = (e.clientX - 40) + 'px';
-                preview.style.top = (e.clientY - 30) + 'px';
+                const previewWidth = parseFloat(preview.style.width);
+                const previewHeight = parseFloat(preview.style.height);
+                preview.style.left = (e.clientX - previewWidth/2) + 'px';
+                preview.style.top = (e.clientY - previewHeight/2) + 'px';
             }
             
             // Check if over valid drop zone
@@ -1709,16 +1867,40 @@
                 return { valid: false };
             }
             
-            // Check if there's a gap that matches the item size at this position
-            const matchingGap = gameState.gaps.find(gap => 
-                gap.x === gridPos.x && gap.y === gridPos.y && 
-                !gap.filled &&
-                gap.size.width === draggedItem.size.width &&
-                gap.size.height === draggedItem.size.height
-            );
+            // Check if there's a gap that matches the item size and the drop position is within the gap area
+            const matchingGap = gameState.gaps.find(gap => {
+                if (gap.filled || 
+                    gap.size.width !== draggedItem.size.width ||
+                    gap.size.height !== draggedItem.size.height) {
+                    return false;
+                }
+                
+                // Check if the drop position is anywhere within the gap area
+                const withinGap = gridPos.x >= gap.x && 
+                                 gridPos.x < gap.x + gap.size.width &&
+                                 gridPos.y >= gap.y && 
+                                 gridPos.y < gap.y + gap.size.height;
+                
+                console.log('Checking gap at', gap.x, gap.y, 'size', gap.size, 'for drop at', gridPos.x, gridPos.y, 'within:', withinGap);
+                return withinGap;
+            });
             
-            if (matchingGap && isGridPositionEmpty(gridPos.x, gridPos.y)) {
-                return { valid: true, gridX: gridPos.x, gridY: gridPos.y, gap: matchingGap };
+            if (matchingGap) {
+                // Check if all cells that the item would occupy are empty
+                let allCellsEmpty = true;
+                for (let dy = 0; dy < draggedItem.size.height; dy++) {
+                    for (let dx = 0; dx < draggedItem.size.width; dx++) {
+                        if (!isGridPositionEmpty(matchingGap.x + dx, matchingGap.y + dy)) {
+                            allCellsEmpty = false;
+                            break;
+                        }
+                    }
+                    if (!allCellsEmpty) break;
+                }
+                
+                if (allCellsEmpty) {
+                    return { valid: true, gridX: matchingGap.x, gridY: matchingGap.y, gap: matchingGap };
+                }
             }
             
             return { valid: false };
@@ -2708,11 +2890,18 @@
             
             // Show modal with animation
             const modal = document.getElementById('success-modal');
+            const modalContent = document.getElementById('success-content');
+            
+            // Ensure modal content starts invisible and centered
+            modalContent.style.opacity = '0';
+            modalContent.style.transform = 'translate(-50%, -60%) scale(0.8)';
+            
             modal.style.display = 'block';
             
-            // Add pulse animation to the modal content
-            const modalContent = document.getElementById('success-content');
-            modalContent.style.animation = 'pulse 0.6s ease-in-out';
+            // Trigger animation after a brief delay to ensure proper positioning
+            requestAnimationFrame(() => {
+                modalContent.style.animation = 'slideIn 0.4s ease-out forwards';
+            });
             
             // Add confetti effect to the page background
             setTimeout(() => {
@@ -2963,6 +3152,11 @@
                         // Clear the grid position first
                         gameState.grid[y][x] = null;
                         
+                        // Clean up HTML element if it exists
+                        if (gridItem.sprite && gridItem.sprite.htmlElement) {
+                            gridItem.sprite.htmlElement.remove();
+                        }
+                        
                         // Destroy the sprite if it exists
                         if (gridItem.sprite) {
                             try {
@@ -3005,7 +3199,11 @@
                 }
             }
             
-            // 2. Restore all items to original quantities in item bank
+            // 2. Clear placed items array
+            gameState.placedItems = [];
+            console.log('Cleared placedItems array');
+            
+            // 3. Restore all items to original quantities in item bank
             gameState.itemBank.forEach(item => {
                 // Reset item state to be in bank
                 item.inBank = true;
@@ -3033,16 +3231,26 @@
                 console.log('Restored item to bank:', item.name);
             });
             
-            // 3. Clear all gap positions back to empty state
+            // 4. Clear all gap positions back to empty state
             gameState.gaps.forEach(gap => {
                 gap.filled = false;
+                gap.filledWith = null;
                 if (gap.sprite) {
                     gap.sprite.setVisible(true);
                 }
-                console.log('Reset gap at position:', gap.x, gap.y);
+                
+                // Ensure all gap cells are marked as 'gap' in the grid
+                const gapSize = gap.size || { width: 1, height: 1 };
+                for (let dy = 0; dy < gapSize.height; dy++) {
+                    for (let dx = 0; dx < gapSize.width; dx++) {
+                        setGridPosition(gap.x + dx, gap.y + dy, 'gap');
+                    }
+                }
+                
+                console.log('Reset gap at position:', gap.x, gap.y, 'size:', gapSize);
             });
             
-            // 4. Turn off light bulb and clear any success states
+            // 5. Turn off light bulb and clear any success states
             updateLightBulb(false);
             
             // Clear flow visualization
@@ -3067,7 +3275,17 @@
             // Clear any drop zone highlights
             highlightDropZones(false);
             
-            // 5. Redraw base circuit with only pre-placed components
+            // Clean up any remaining HTML elements from placed items in canvas container
+            const canvas = document.querySelector('canvas');
+            const canvasContainer = canvas.parentElement;
+            if (canvasContainer) {
+                const itemElements = canvasContainer.querySelectorAll('div[style*="background-image"][style*="assets/items"]');
+                itemElements.forEach(element => {
+                    element.remove();
+                });
+            }
+            
+            // 6. Redraw base circuit with only pre-placed components
             // Clear connection graphics first
             clearConnectionGraphics();
             

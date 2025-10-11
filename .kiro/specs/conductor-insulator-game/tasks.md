@@ -210,7 +210,26 @@
   - Verify tooltip hide functionality works properly on mouse leave
   - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 14.9, 14.10_
 
-- [ ] 17. Implement multi-stage system and stage progression
+- [x] 17. Replace game items with image assets
+
+
+
+
+
+
+
+
+
+  - Update battery sprite to use battery.png image asset
+  - Update light bulb sprite to use light-bulb.png spritesheet (left half for off state, right half for on state)
+  - Replace item bank items with corresponding image assets (coin.png, bottlecap.png, key.png, etc.)
+  - Update item definitions to use proper image dimensions and positioning
+  - Ensure image loading and display works correctly in Phaser.js
+  - Maintain existing drag-and-drop functionality with image sprites
+  - _Requirements: 2.4, 4.1_
+
+- [-] 18. Implement multi-stage system and stage progression
+
   - Create stage management system to track current stage
   - Add stage configuration objects for different circuit layouts
   - Implement stage switching functionality to load different circuit configurations
@@ -218,7 +237,7 @@
   - Create stage reset functionality that clears current stage without affecting progression
   - _Requirements: 15.1, 15.2, 17.1, 17.3, 17.4, 17.7_
 
-- [ ] 18. Create Stage 2 circuit layout with parallel paths
+- [ ] 19. Create Stage 2 circuit layout with parallel paths
   - Design Stage 2 circuit configuration with battery on left and bulb on right
   - Position three missing parts: rectangular at top center, square at middle left, rectangular at bottom left
   - Center the entire Stage 2 circuit layout within the 15x15 grid
@@ -226,7 +245,7 @@
   - Implement proper branching and rejoining wire connections for parallel circuit design
   - _Requirements: 15.3, 15.4, 15.5, 15.6, 16.1, 16.3, 16.4, 16.5, 16.6_
 
-- [ ] 19. Update circuit evaluation system for parallel paths
+- [ ] 20. Update circuit evaluation system for parallel paths
   - Modify circuit evaluation to support multiple parallel paths in Stage 2
   - Ensure breadth-first search algorithm can find any valid conductive route
   - Update path finding to handle branching circuits with multiple valid solutions
@@ -234,7 +253,7 @@
   - Test circuit completion when any parallel path provides complete connection
   - _Requirements: 15.7, 15.8, 17.2, 17.5_
 
-- [ ] 20. Implement visual connection system for parallel circuits
+- [ ] 21. Implement visual connection system for parallel circuits
   - Update wire rendering system to handle branching and rejoining connections
   - Create dynamic wire connections that show parallel paths clearly
   - Ensure continuous wire visualization works with multiple circuit branches
@@ -242,7 +261,7 @@
   - Maintain visual clarity when showing multiple conductive routes simultaneously
   - _Requirements: 16.2, 16.7, 16.8_
 
-- [ ]* 21. Add educational enhancements and additional features
+- [ ]* 22. Add educational enhancements and additional features
   - Include explanatory text about conductors and insulators
   - Add sound effects for interactions and success
   - Create additional difficulty levels with different circuit layouts
