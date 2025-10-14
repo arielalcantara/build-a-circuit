@@ -495,6 +495,8 @@
             cellSize: canvasSize / 15, // Dynamic cell size based on canvas
             itemBank: [],
             placedItems: [],
+            currentLayout: 'first', // Track which circuit layout is active
+            circuitLayouts: {}, // Store all circuit configurations
             battery: { x: 2, y: 6, width: 1, height: 3, sprite: null },
             bulb: { x: 11, y: 6, width: 3, height: 3, sprite: null, isLit: false },
             // Two-wire circuit: top wire (positive) and bottom wire (negative)
@@ -540,6 +542,81 @@
             draggedItem: null,
             isDragging: false,
             connectionGraphics: [] // Store connection graphics for cleanup
+        };
+
+        // Define all circuit layouts
+        gameState.circuitLayouts = {
+            first: {
+                battery: { x: 2, y: 6, width: 1, height: 3 },
+                bulb: { x: 11, y: 6, width: 3, height: 3 },
+                gaps: [
+                    { x: 5, y: 4, filled: false, size: { width: 1, height: 1 } },
+                    { x: 8, y: 4, filled: false, size: { width: 2, height: 1 } },
+                    { x: 6, y: 10, filled: false, size: { width: 3, height: 1 } }
+                ],
+                preplacedWires: [
+                    // Top horizontal wire (positive path) - row 4
+                    { x: 3, y: 4 }, { x: 4, y: 4 }, { x: 6, y: 4 }, { x: 7, y: 4 },
+                    { x: 10, y: 4 }, { x: 11, y: 4 },
+                    // Battery connections
+                    { x: 2, y: 4 }, { x: 2, y: 5 }, { x: 2, y: 9 }, { x: 2, y: 10 },
+                    // Bulb connections
+                    { x: 12, y: 4 }, { x: 12, y: 5 }, { x: 12, y: 9 }, { x: 12, y: 10 },
+                    // Bottom horizontal wire (negative path) - row 10
+                    { x: 3, y: 10 }, { x: 4, y: 10 }, { x: 5, y: 10 },
+                    { x: 9, y: 10 }, { x: 10, y: 10 }, { x: 11, y: 10 }
+                ]
+            },
+            second: {
+                battery: { x: 1, y: 6, width: 1, height: 3 },  // B at (1,6), (1,7), (1,8)
+                bulb: { x: 11, y: 6, width: 3, height: 3 },    // O O O at (11,6)-(13,8)
+                gaps: [
+                    // Row 4: M M at positions (3,4) and (4,4) = 1x2 gap
+                    { x: 3, y: 4, filled: false, size: { width: 2, height: 1 } },
+                    // Vertical gap: M at positions (6,6), (6,7), (6,8) = 1x3 vertical gap
+                    { x: 6, y: 6, filled: false, size: { width: 1, height: 3 } },
+                    // Row 10: M at position (9,10) = 1x1 gap
+                    { x: 9, y: 10, filled: false, size: { width: 1, height: 1 } }
+                ],
+                preplacedWires: [
+                    // Row 4: . L H M M H T H H H H H L . .
+                    { x: 1, y: 4 },   // L - L-shaped wire
+                    { x: 2, y: 4 },   // H - Horizontal wire
+                    // Gaps at (3,4) and (4,4) - M M
+                    { x: 5, y: 4 },   // H - Horizontal wire
+                    { x: 6, y: 4 },   // T - T-shaped wire
+                    { x: 7, y: 4 },   // H - Horizontal wire
+                    { x: 8, y: 4 },   // H - Horizontal wire
+                    { x: 9, y: 4 },   // H - Horizontal wire
+                    { x: 10, y: 4 },  // H - Horizontal wire
+                    { x: 11, y: 4 },  // H - Horizontal wire
+                    { x: 12, y: 4 },  // L - L-shaped wire (bulb connection)
+                    
+                    // Row 5: . V . . . . V . . . . . V . .
+                    { x: 1, y: 5 },   // V - Vertical wire
+                    { x: 6, y: 5 },   // V - Vertical wire (T-junction connection)
+                    { x: 12, y: 5 },  // V - Vertical wire (bulb connection)
+                    
+                    // Row 9: . V . . . . V . . . . . V . .
+                    { x: 1, y: 9 },   // V - Vertical wire
+                    { x: 6, y: 9 },   // V - Vertical wire (T-junction connection)
+                    { x: 12, y: 9 },  // V - Vertical wire (bulb connection)
+                    
+                    // Row 10: . L H H H H T H H M H H L . .
+                    { x: 1, y: 10 },  // L - L-shaped wire
+                    { x: 2, y: 10 },  // H - Horizontal wire
+                    { x: 3, y: 10 },  // H - Horizontal wire
+                    { x: 4, y: 10 },  // H - Horizontal wire
+                    { x: 5, y: 10 },  // H - Horizontal wire
+                    { x: 6, y: 10 },  // T - T-shaped wire
+                    { x: 7, y: 10 },  // H - Horizontal wire
+                    { x: 8, y: 10 },  // H - Horizontal wire
+                    // Gap at (9,10) - M
+                    { x: 10, y: 10 }, // H - Horizontal wire
+                    { x: 11, y: 10 }, // H - Horizontal wire
+                    { x: 12, y: 10 }  // L - L-shaped wire (bulb connection)
+                ]
+            }
         };
 
         function preload() {
@@ -600,17 +677,14 @@
             // Draw grid lines
             drawGrid();
             
-            // Create circuit components
-            createCircuitComponents();
+            // Load the first circuit layout
+            loadCircuitLayout('first');
             
             // Create item bank
             createItemBank();
             
             // Set up input handling
             setupInputHandling();
-            
-            // Initialize wire connections
-            updateWireConnections();
             
             // Start position updater for HTML elements
             startPositionUpdater();
@@ -771,13 +845,16 @@
         }
 
         function determineWireType(x, y) {
-            // Check for T-shaped junctions (where three or more wires meet)
-            const adjacentWires = getAdjacentWireCount(x, y);
-            if (adjacentWires >= 3) {
-                return 'T-shaped';
+            // Only apply T-junction logic for the second circuit layout
+            if (gameState.currentLayout === 'second') {
+                // Specific T-junction positions in the second layout
+                if ((x === 6 && y === 4) || (x === 6 && y === 10)) {
+                    return 'T-shaped';
+                }
             }
             
             // Check for L-shaped junctions (corner connections)
+            const adjacentWires = getAdjacentWireCount(x, y);
             if (adjacentWires === 2) {
                 // Check if it's a corner (not straight line)
                 const directions = getAdjacentWireDirections(x, y);
@@ -788,6 +865,11 @@
                         return 'L-shaped';
                     }
                 }
+            }
+            
+            // Check for T-shaped junctions (where three or more wires meet)
+            if (adjacentWires >= 3) {
+                return 'T-shaped';
             }
             
             return 'straight';
@@ -834,7 +916,8 @@
         }
 
         function isWirePosition(x, y) {
-            return gameState.preplacedWires.some(wire => wire.x === x && wire.y === y);
+            return gameState.preplacedWires.some(wire => wire.x === x && wire.y === y) ||
+                   getGridPosition(x, y) === 'wire';
         }
 
         function createStraightWire(pos, x, y) {
@@ -862,8 +945,16 @@
         }
 
         function isVerticalWirePosition(x, y) {
-            // Vertical wires are at positions (2,5), (2,9), (12,5), (12,9)
-            return (x === 2 && (y === 5 || y === 9)) || (x === 12 && (y === 5 || y === 9));
+            if (gameState.currentLayout === 'first') {
+                // First circuit: Vertical wires at (2,5), (2,9), (12,5), (12,9)
+                return (x === 2 && (y === 5 || y === 9)) || (x === 12 && (y === 5 || y === 9));
+            } else if (gameState.currentLayout === 'second') {
+                // Second circuit: Vertical wires at (1,5), (1,9), (6,5), (6,9), (12,5), (12,9)
+                return (x === 1 && (y === 5 || y === 9)) || 
+                       (x === 6 && (y === 5 || y === 9)) || 
+                       (x === 12 && (y === 5 || y === 9));
+            }
+            return false;
         }
 
         function createLShapedWire(pos, x, y) {
@@ -871,47 +962,93 @@
             const wireThickness = 12; // Match straight wire thickness
             const halfCell = gameState.cellSize / 2;
             
-            // Create L-shaped wires that extend to cell edges for proper connection
-            if (x === 2 && y === 4) {
-                // Battery top L-wire: connects right (to horizontal wire) and down (to vertical wire)
-                const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
-                const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
-                horizontalWire.setStrokeStyle(1, 0x8B4513);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                horizontalWire.setDepth(5);
-                verticalWire.setDepth(5);
-                group.add(horizontalWire);
-                group.add(verticalWire);
-            } else if (x === 2 && y === 10) {
-                // Battery bottom L-wire: connects right (to horizontal wire) and up (from vertical wire)
-                const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
-                const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
-                horizontalWire.setStrokeStyle(1, 0x8B4513);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                horizontalWire.setDepth(5);
-                verticalWire.setDepth(5);
-                group.add(horizontalWire);
-                group.add(verticalWire);
-            } else if (x === 12 && y === 4) {
-                // Bulb top L-wire: connects left (from horizontal wire) and down (to vertical wire)
-                const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
-                const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
-                horizontalWire.setStrokeStyle(1, 0x8B4513);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                horizontalWire.setDepth(5);
-                verticalWire.setDepth(5);
-                group.add(horizontalWire);
-                group.add(verticalWire);
-            } else if (x === 12 && y === 10) {
-                // Bulb bottom L-wire: connects up (from vertical wire) and left (to horizontal wire)
-                const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
-                const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
-                horizontalWire.setStrokeStyle(1, 0x8B4513);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                horizontalWire.setDepth(5);
-                verticalWire.setDepth(5);
-                group.add(horizontalWire);
-                group.add(verticalWire);
+            // Create L-shaped wires based on current layout
+            if (gameState.currentLayout === 'first') {
+                // First circuit L-wire positions
+                if (x === 2 && y === 4) {
+                    // Battery top L-wire: connects right and down
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 2 && y === 10) {
+                    // Battery bottom L-wire: connects right and up
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 4) {
+                    // Bulb top L-wire: connects left and down
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 10) {
+                    // Bulb bottom L-wire: connects left and up
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                }
+            } else if (gameState.currentLayout === 'second') {
+                // Second circuit L-wire positions
+                if (x === 1 && y === 4) {
+                    // Battery top L-wire: connects right and down
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 1 && y === 10) {
+                    // Battery bottom L-wire: connects right and up
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 4) {
+                    // Bulb top L-wire: connects left and down
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 10) {
+                    // Bulb bottom L-wire: connects left and up
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                }
             }
             
             // Add center junction piece for proper connection
@@ -925,33 +1062,91 @@
 
         function createTShapedWire(pos, x, y) {
             const group = scene.add.group();
+            const wireThickness = 12; // Match L-shaped wire thickness
+            const halfCell = gameState.cellSize / 2;
             
-            // Create T-shape using rectangles to match straight wire styling
-            // Horizontal segment (always present)
-            const horizontalWire = scene.add.rectangle(pos.x, pos.y, 40, 8, 0xCD7F32);
-            horizontalWire.setStrokeStyle(1, 0x8B4513);
-            group.add(horizontalWire);
-            
-            // Vertical segments (based on adjacent wires)
-            const hasWireAbove = isWirePosition(x, y - 1);
-            const hasWireBelow = isWirePosition(x, y + 1);
-            
-            if (hasWireAbove && hasWireBelow) {
-                // Full vertical segment
-                const verticalWire = scene.add.rectangle(pos.x, pos.y, 8, 40, 0xCD7F32);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                group.add(verticalWire);
-            } else if (hasWireAbove) {
-                // Upper vertical segment
-                const verticalWire = scene.add.rectangle(pos.x, pos.y - 10, 8, 20, 0xCD7F32);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                group.add(verticalWire);
-            } else if (hasWireBelow) {
-                // Lower vertical segment
-                const verticalWire = scene.add.rectangle(pos.x, pos.y + 10, 8, 20, 0xCD7F32);
-                verticalWire.setStrokeStyle(1, 0x8B4513);
-                group.add(verticalWire);
+            // Create T-shaped wires with segments extending to cell edges, similar to L-shaped wires
+            if (x === 6 && y === 4) {
+                // T-junction at (6,4) - connects left, right, and down
+                // Left horizontal segment
+                const leftWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                leftWire.setStrokeStyle(1, 0x8B4513);
+                leftWire.setDepth(5);
+                group.add(leftWire);
+                
+                // Right horizontal segment
+                const rightWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                rightWire.setStrokeStyle(1, 0x8B4513);
+                rightWire.setDepth(5);
+                group.add(rightWire);
+                
+                // Downward vertical segment
+                const downWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                downWire.setStrokeStyle(1, 0x8B4513);
+                downWire.setDepth(5);
+                group.add(downWire);
+                
+            } else if (x === 6 && y === 10) {
+                // T-junction at (6,10) - connects left, right, and up
+                // Left horizontal segment
+                const leftWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                leftWire.setStrokeStyle(1, 0x8B4513);
+                leftWire.setDepth(5);
+                group.add(leftWire);
+                
+                // Right horizontal segment
+                const rightWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                rightWire.setStrokeStyle(1, 0x8B4513);
+                rightWire.setDepth(5);
+                group.add(rightWire);
+                
+                // Upward vertical segment
+                const upWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                upWire.setStrokeStyle(1, 0x8B4513);
+                upWire.setDepth(5);
+                group.add(upWire);
+                
+            } else {
+                // Generic T-junction logic for other positions
+                const hasWireLeft = isWirePosition(x - 1, y);
+                const hasWireRight = isWirePosition(x + 1, y);
+                const hasWireAbove = isWirePosition(x, y - 1);
+                const hasWireBelow = isWirePosition(x, y + 1);
+                
+                // Create horizontal segments
+                if (hasWireLeft) {
+                    const leftWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    leftWire.setStrokeStyle(1, 0x8B4513);
+                    leftWire.setDepth(5);
+                    group.add(leftWire);
+                }
+                if (hasWireRight) {
+                    const rightWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    rightWire.setStrokeStyle(1, 0x8B4513);
+                    rightWire.setDepth(5);
+                    group.add(rightWire);
+                }
+                
+                // Create vertical segments
+                if (hasWireAbove) {
+                    const upWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    upWire.setStrokeStyle(1, 0x8B4513);
+                    upWire.setDepth(5);
+                    group.add(upWire);
+                }
+                if (hasWireBelow) {
+                    const downWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    downWire.setStrokeStyle(1, 0x8B4513);
+                    downWire.setDepth(5);
+                    group.add(downWire);
+                }
             }
+            
+            // Add center junction piece for proper connection (like L-shaped wires)
+            const centerPiece = scene.add.rectangle(pos.x, pos.y, wireThickness, wireThickness, 0xCD7F32);
+            centerPiece.setStrokeStyle(1, 0x8B4513);
+            centerPiece.setDepth(5);
+            group.add(centerPiece);
             
             return group;
         }
@@ -1333,11 +1528,21 @@
             return itemDiv;
         }
 
-        function createGameSprite(item, x, y) {
-            // Calculate sprite size based on item size - occupy full grid cell(s)
+        function createGameSprite(item, x, y, needsRotation = false) {
+            // Calculate sprite size based on the actual grid space it occupies
             const cellSize = gameState.cellSize;
-            const spriteWidth = cellSize * item.size.width;
-            const spriteHeight = cellSize * item.size.height;
+            
+            // For rotated items, the container should match the gap size (1x3), not the item's original size
+            let spriteWidth, spriteHeight;
+            if (needsRotation) {
+                // Item is rotated to fit in a 1x3 vertical gap
+                spriteWidth = cellSize * 1;  // 1 cell wide
+                spriteHeight = cellSize * 3; // 3 cells tall
+            } else {
+                // Normal orientation - use item's original size
+                spriteWidth = cellSize * item.size.width;
+                spriteHeight = cellSize * item.size.height;
+            }
             
             // Position items to align with grid cells - use top-left corner like gap indicators
             const adjustedX = x * cellSize;
@@ -1353,20 +1558,55 @@
             }
             
             const itemElement = document.createElement('div');
-            itemElement.style.cssText = `
-                position: absolute;
-                left: ${adjustedX}px;
-                top: ${adjustedY}px;
-                width: ${spriteWidth}px;
-                height: ${spriteHeight}px;
-                background-image: url('assets/items/${item.imageKey}.png');
-                background-size: contain;
-                background-repeat: no-repeat;
-                background-position: center;
-                pointer-events: none;
-                z-index: 10;
-                cursor: pointer;
-            `;
+            
+            if (needsRotation) {
+                // For rotated items, create a container that fills the gap (1x3)
+                itemElement.style.cssText = `
+                    position: absolute;
+                    left: ${adjustedX}px;
+                    top: ${adjustedY}px;
+                    width: ${spriteWidth}px;
+                    height: ${spriteHeight}px;
+                    pointer-events: none;
+                    z-index: 10;
+                    cursor: pointer;
+                `;
+                
+                // Create the rotated image that fills the container
+                // The key insight: we want the image to fill the 1x3 container when rotated
+                // So we need to size it as 3x1 initially, then rotate it
+                const imageDiv = document.createElement('div');
+                imageDiv.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: ${spriteHeight}px;
+                    height: ${spriteWidth}px;
+                    background-image: url('assets/items/${item.imageKey}.png');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    transform: translate(-50%, -50%) rotate(90deg);
+                    transform-origin: center;
+                `;
+                itemElement.appendChild(imageDiv);
+            } else {
+                // Normal orientation
+                itemElement.style.cssText = `
+                    position: absolute;
+                    left: ${adjustedX}px;
+                    top: ${adjustedY}px;
+                    width: ${spriteWidth}px;
+                    height: ${spriteHeight}px;
+                    background-image: url('assets/items/${item.imageKey}.png');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    pointer-events: none;
+                    z-index: 10;
+                    cursor: pointer;
+                `;
+            }
             
             // Append to canvas container instead of body
             if (canvasContainer) {
@@ -1436,6 +1676,43 @@
                     console.log('Started dragging placed item for potential removal');
                     item.isDragging = true;
                     
+                    // Temporarily remove from placed items list
+                    const itemIndex = gameState.placedItems.indexOf(item);
+                    if (itemIndex > -1) {
+                        gameState.placedItems.splice(itemIndex, 1);
+                    }
+                    
+                    // Immediately show the gap indicator and clear grid positions when dragging starts
+                    const effectiveWidth = item.isRotated ? item.size.height : item.size.width;
+                    const effectiveHeight = item.isRotated ? item.size.width : item.size.height;
+                    
+                    // Clear grid positions occupied by this item
+                    for (let dy = 0; dy < effectiveHeight; dy++) {
+                        for (let dx = 0; dx < effectiveWidth; dx++) {
+                            setGridPosition(item.gridX + dx, item.gridY + dy, null);
+                        }
+                    }
+                    
+                    const gap = gameState.gaps.find(g => {
+                        if (item.isRotated) {
+                            return g.x === item.gridX && g.y === item.gridY &&
+                                   g.size.width === effectiveWidth && g.size.height === effectiveHeight;
+                        } else {
+                            return g.x === item.gridX && g.y === item.gridY &&
+                                   g.size.width === effectiveWidth && g.size.height === effectiveHeight;
+                        }
+                    });
+                    
+                    if (gap) {
+                        // Temporarily mark gap as unfilled and show indicator
+                        gap.filled = false;
+                        gap.filledWith = null;
+                        if (gap.sprite) {
+                            gap.sprite.setVisible(true);
+                        }
+                        console.log('Gap indicator shown for dragging item');
+                    }
+                    
                     // Visual feedback - make semi-transparent and bring to front
                     if (this.htmlElement) {
                         this.htmlElement.style.opacity = '0.8';
@@ -1444,7 +1721,7 @@
                     }
                     
                     // Show initial drag feedback
-                    showFeedback('Drag away from circuit to remove item', 'info');
+                    showFeedback('Drag away from circuit to remove item, or drop back to replace', 'info');
                 });
                 
                 itemSprite.on('drag', function(pointer, dragX, dragY) {
@@ -1463,7 +1740,8 @@
                         item.originalX, item.originalY, dragX, dragY
                     );
                     
-                    const REMOVAL_THRESHOLD = 80; // pixels - configurable threshold
+                    // Remove item when dragged outside its occupied cells
+                    const REMOVAL_THRESHOLD = gameState.cellSize * 0.75; // 75% of a cell size
                     
                     if (distance > REMOVAL_THRESHOLD) {
                         // Visual feedback for removal zone
@@ -1501,8 +1779,7 @@
                         }
                         
                         // Update feedback message
-                        const remainingDistance = Math.ceil(REMOVAL_THRESHOLD - distance);
-                        showFeedback(`Drag ${remainingDistance}px further to remove item`, 'info');
+                        showFeedback('Drag outside the cell to remove item', 'info');
                     }
                 });
                 
@@ -1516,17 +1793,150 @@
                         item.removalHint = null;
                     }
                     
-                    // Check distance from original position
+                    // Use the sprite's current position instead of dragX/dragY which might be unreliable
+                    const currentX = this.x;
+                    const currentY = this.y;
+                    
+                    console.log('Sprite current position:', currentX, currentY);
+                    console.log('Drag event coords:', dragX, dragY);
+                    
+                    // Check distance from original position using sprite position
                     const distance = Phaser.Math.Distance.Between(
-                        item.originalX, item.originalY, dragX, dragY
+                        item.originalX, item.originalY, currentX, currentY
                     );
                     
-                    const REMOVAL_THRESHOLD = 80; // pixels
+                    // Remove item when dragged outside its occupied cells  
+                    const REMOVAL_THRESHOLD = gameState.cellSize * 0.75; // 75% of a cell size
                     
-                    if (distance > REMOVAL_THRESHOLD) {
+                    // Create a temporary drag state for checking
+                    gameState.draggedItem = item;
+                    gameState.isDragging = true;
+                    
+                    // Check if the canvas coordinates are within bounds and find matching gap
+                    const gridPos = worldToGrid(currentX, currentY);
+                    console.log('Grid position from sprite coords:', gridPos);
+                    
+                    // Always check if the item is being dropped back in its original position first
+                    let directGapCheck = null;
+                    
+                    // Check if the current sprite position is close to the original position
+                    const originalPos = gridToWorld(item.originalGridX, item.originalGridY);
+                    const distanceFromOriginal = Phaser.Math.Distance.Between(
+                        originalPos.x, originalPos.y, currentX, currentY
+                    );
+                    
+                    console.log('Distance from original grid position:', distanceFromOriginal);
+                    
+                    // If close to original position, prioritize placing back in original gap
+                    if (distanceFromOriginal < gameState.cellSize * 1.5) { // Within 1.5 cells of original
+                        console.log('Close to original position, checking original gap');
+                        directGapCheck = gameState.gaps.find(gap => {
+                            const effectiveWidth = item.isRotated ? item.size.height : item.size.width;
+                            const effectiveHeight = item.isRotated ? item.size.width : item.size.height;
+                            
+                            return gap.x === item.originalGridX && 
+                                   gap.y === item.originalGridY &&
+                                   gap.size.width === effectiveWidth && 
+                                   gap.size.height === effectiveHeight &&
+                                   !gap.filled; // Should be unfilled since we cleared it on drag start
+                        });
+                    }
+                    
+                    // If not found at original position, try to find gap at the current drag position
+                    if (!directGapCheck) {
+                        console.log('Not at original position, checking current drag position');
+                        directGapCheck = gameState.gaps.find(gap => {
+                            if (gap.filled) return false;
+                            
+                            // Check if grid position is within gap bounds
+                            const withinGap = gridPos.x >= gap.x && 
+                                             gridPos.x < gap.x + gap.size.width &&
+                                             gridPos.y >= gap.y && 
+                                             gridPos.y < gap.y + gap.size.height;
+                            
+                            // Check size compatibility (including rotation)
+                            const normalMatch = (item.size.width === gap.size.width && 
+                                               item.size.height === gap.size.height);
+                            const rotatedMatch = (item.size.width === 3 && item.size.height === 1 &&
+                                                gap.size.width === 1 && gap.size.height === 3);
+                            
+                            return withinGap && (normalMatch || rotatedMatch);
+                        });
+                    }
+                    
+                    console.log('Direct gap check result:', directGapCheck);
+                    
+                    // Use direct gap check if available, otherwise fall back to screen coordinate method
+                    let dropResult;
+                    if (directGapCheck) {
+                        const needsRotation = (item.size.width === 3 && item.size.height === 1 &&
+                                             directGapCheck.size.width === 1 && directGapCheck.size.height === 3);
+                        dropResult = {
+                            valid: true,
+                            gridX: directGapCheck.x,
+                            gridY: directGapCheck.y,
+                            gap: directGapCheck,
+                            needsRotation: needsRotation
+                        };
+                    } else {
+                        dropResult = checkDropLocationFromCanvas(currentX, currentY);
+                    }
+                    
+                    console.log('Final drop result:', dropResult);
+                    
+
+                    
+                    // Set up temporary drag state for drop checking
+                    gameState.draggedItem = item;
+                    gameState.isDragging = true;
+                    
+                    console.log('Item original position:', item.originalGridX, item.originalGridY);
+                    console.log('Item current position:', item.gridX, item.gridY);
+                    console.log('Distance from original:', distance);
+                    
+                    // Clean up temporary drag state
+                    gameState.draggedItem = null;
+                    gameState.isDragging = false;
+                    
+                    if (dropResult.valid) {
+                        // Item is being dropped in a valid gap - place it there
+                        console.log('Item dropped in valid gap at:', dropResult.gridX, dropResult.gridY);
+                        
+                        // If it's not the original position, we need to clear the original gap first
+                        if (dropResult.gridX !== item.originalGridX || dropResult.gridY !== item.originalGridY) {
+                            // Clear original position
+                            const originalGap = gameState.gaps.find(g => {
+                                const effectiveWidth = item.isRotated ? item.size.height : item.size.width;
+                                const effectiveHeight = item.isRotated ? item.size.width : item.size.height;
+                                
+                                return g.x === item.originalGridX && g.y === item.originalGridY &&
+                                       g.size.width === effectiveWidth && g.size.height === effectiveHeight;
+                            });
+                            
+                            if (originalGap) {
+                                originalGap.filled = false;
+                                originalGap.filledWith = null;
+                                if (originalGap.sprite) {
+                                    originalGap.sprite.setVisible(true);
+                                }
+                            }
+                        }
+                        
+                        // Remove current sprite
+                        this.disableInteractive();
+                        if (this.htmlElement) {
+                            this.htmlElement.remove();
+                            this.htmlElement = null;
+                        }
+                        
+                        // Place item in new position
+                        placeItemOnGrid(item, dropResult.gridX, dropResult.gridY, dropResult.needsRotation);
+                        
+                        showFeedback('✅ Item placed successfully!', 'success');
+                        
+                    } else if (distanceFromOriginal > REMOVAL_THRESHOLD) {
+                        // Item dragged far away from original position - remove it
                         console.log('Item dragged beyond removal threshold - removing');
-                        console.log('Sprite position before removal:', this.x, this.y);
-                        console.log('Original position:', item.originalX, item.originalY);
                         
                         // Disable dragging to prevent further interaction
                         this.disableInteractive();
@@ -1543,7 +1953,39 @@
                         
                         // Show success feedback with animation
                         showFeedback('✅ Item returned to bank! You can place it again.', 'success');
+                        
                     } else {
+                        // Return to original position - restore gap state
+                        const gap = gameState.gaps.find(g => {
+                            const effectiveWidth = item.isRotated ? item.size.height : item.size.width;
+                            const effectiveHeight = item.isRotated ? item.size.width : item.size.height;
+                            
+                            return g.x === item.originalGridX && g.y === item.originalGridY &&
+                                   g.size.width === effectiveWidth && g.size.height === effectiveHeight;
+                        });
+                        
+                        if (gap) {
+                            gap.filled = true;
+                            gap.filledWith = item;
+                            if (gap.sprite) {
+                                gap.sprite.setVisible(false);
+                            }
+                        }
+                        
+                        // Re-add to placed items list
+                        if (!gameState.placedItems.includes(item)) {
+                            gameState.placedItems.push(item);
+                        }
+                        
+                        // Restore grid positions
+                        const effectiveWidth = item.isRotated ? item.size.height : item.size.width;
+                        const effectiveHeight = item.isRotated ? item.size.width : item.size.height;
+                        for (let dy = 0; dy < effectiveHeight; dy++) {
+                            for (let dx = 0; dx < effectiveWidth; dx++) {
+                                setGridPosition(item.originalGridX + dx, item.originalGridY + dy, item);
+                            }
+                        }
+                        
                         // Return to original position with smooth animation
                         scene.tweens.add({
                             targets: this,
@@ -1568,7 +2010,7 @@
                         }
                         
                         // Show feedback
-                        showFeedback('Item returned to position. Drag further to remove.', 'info');
+                        showFeedback('Item returned to original position. Drag further to remove.', 'info');
                     }
                 });
             } else {
@@ -1776,6 +2218,7 @@
             item.gridX = -1;
             item.gridY = -1;
             item.isDragging = false;
+            item.isRotated = false; // Reset rotation state
             
             // Clear any stored positions
             item.originalX = undefined;
@@ -1822,14 +2265,18 @@
             console.log('Item successfully returned to bank');
         }
 
-        function placeItemOnGrid(item, gridX, gridY) {
+        function placeItemOnGrid(item, gridX, gridY, needsRotation = false) {
+            
             // Hide HTML element
             if (item.htmlElement) {
                 item.htmlElement.style.display = 'none';
             }
             
-            // Create game sprite
-            createGameSprite(item, gridX, gridY);
+            // Store rotation state
+            item.isRotated = needsRotation;
+            
+            // Create game sprite with rotation
+            createGameSprite(item, gridX, gridY, needsRotation);
             
             // Update item state
             item.inBank = false;
@@ -1837,19 +2284,28 @@
             item.gridX = gridX;
             item.gridY = gridY;
             
-            // Update grid - mark all cells occupied by this item
-            for (let dy = 0; dy < item.size.height; dy++) {
-                for (let dx = 0; dx < item.size.width; dx++) {
+            // Update grid - mark all cells occupied by this item (considering rotation)
+            const effectiveWidth = needsRotation ? item.size.height : item.size.width;
+            const effectiveHeight = needsRotation ? item.size.width : item.size.height;
+            
+            for (let dy = 0; dy < effectiveHeight; dy++) {
+                for (let dx = 0; dx < effectiveWidth; dx++) {
                     setGridPosition(gridX + dx, gridY + dy, item);
                 }
             }
             
-            // Check if this fills a gap (must match size exactly)
-            const gap = gameState.gaps.find(g => 
-                g.x === gridX && g.y === gridY &&
-                g.size.width === item.size.width &&
-                g.size.height === item.size.height
-            );
+            // Check if this fills a gap (considering rotation)
+            const gap = gameState.gaps.find(g => {
+                if (needsRotation) {
+                    return g.x === gridX && g.y === gridY &&
+                           g.size.width === item.size.height &&
+                           g.size.height === item.size.width;
+                } else {
+                    return g.x === gridX && g.y === gridY &&
+                           g.size.width === item.size.width &&
+                           g.size.height === item.size.height;
+                }
+            });
             
             if (gap) {
                 gap.filled = true;
@@ -1859,7 +2315,8 @@
                 }
                 
                 // Show success feedback for correct placement
-                showFeedback(`✅ ${item.name} placed in ${gap.label}!`, 'success');
+                const rotationText = needsRotation ? ' (rotated)' : '';
+                showFeedback(`✅ ${item.name} placed${rotationText}!`, 'success');
             }
             
             // Add to placed items
@@ -1970,16 +2427,28 @@
         function handleDragMove(e) {
             if (!gameState.isDragging || !gameState.draggedItem) return;
             
-            // Update drag preview position
+            // Check if over valid drop zone and if rotation is needed
+            const dropResult = checkDropLocation(e.clientX, e.clientY);
+            
+            // Update drag preview position and rotation
             const preview = document.getElementById('drag-preview');
             if (preview) {
                 const previewWidth = parseFloat(preview.style.width);
                 const previewHeight = parseFloat(preview.style.height);
                 preview.style.left = (e.clientX - previewWidth/2) + 'px';
                 preview.style.top = (e.clientY - previewHeight/2) + 'px';
+                
+                // Apply rotation if needed for vertical gaps
+                if (dropResult.valid && dropResult.needsRotation) {
+                    preview.style.transform = 'rotate(90deg)';
+                    preview.style.opacity = '0.8';
+                } else {
+                    preview.style.transform = 'rotate(0deg)';
+                    preview.style.opacity = '0.7';
+                }
             }
             
-            // Check if over valid drop zone
+            // Update drop zone highlighting
             updateDropZoneHighlight(e.clientX, e.clientY);
         }
 
@@ -1996,8 +2465,8 @@
             const dropResult = checkDropLocation(e.clientX, e.clientY);
             
             if (dropResult.valid) {
-                // Place item on grid
-                placeItemOnGrid(gameState.draggedItem, dropResult.gridX, dropResult.gridY);
+                // Place item on grid with rotation if needed
+                placeItemOnGrid(gameState.draggedItem, dropResult.gridX, dropResult.gridY, dropResult.needsRotation);
             } else {
                 // Return to bank (item stays in bank)
                 console.log('Invalid drop location - item stays in bank');
@@ -2023,35 +2492,73 @@
             gameState.isDragging = false;
         }
 
+        function checkDropLocationFromCanvas(canvasX, canvasY) {
+            console.log('checkDropLocationFromCanvas called with:', canvasX, canvasY);
+            
+            // Check if coordinates are within canvas bounds
+            if (canvasX < 0 || canvasX > canvasSize || canvasY < 0 || canvasY > canvasSize) {
+                console.log('Outside canvas bounds');
+                return { valid: false };
+            }
+            
+            // Convert to grid coordinates
+            const gridPos = worldToGrid(canvasX, canvasY);
+            console.log('Grid position:', gridPos);
+            
+            return checkDropAtGridPosition(gridPos);
+        }
+
         function checkDropLocation(clientX, clientY) {
             // Get canvas bounds
             const canvas = document.querySelector('canvas');
             const canvasRect = canvas.getBoundingClientRect();
             
+            console.log('checkDropLocation called with:', clientX, clientY);
+            console.log('Canvas rect:', canvasRect);
+            
             // Check if over canvas
             if (clientX < canvasRect.left || clientX > canvasRect.right ||
                 clientY < canvasRect.top || clientY > canvasRect.bottom) {
+                console.log('Outside canvas bounds');
                 return { valid: false };
             }
             
             // Convert to canvas coordinates
             const canvasX = clientX - canvasRect.left;
             const canvasY = clientY - canvasRect.top;
+            console.log('Canvas coordinates:', canvasX, canvasY);
             
             // Convert to grid coordinates
             const gridPos = worldToGrid(canvasX, canvasY);
+            console.log('Grid position:', gridPos);
+            
+            return checkDropAtGridPosition(gridPos);
+        }
+
+        function checkDropAtGridPosition(gridPos) {
             
             // Get the dragged item's size
             const draggedItem = gameState.draggedItem;
             if (!draggedItem || !draggedItem.size) {
+                console.log('No dragged item or size');
                 return { valid: false };
             }
+            console.log('Dragged item:', draggedItem.name, 'size:', draggedItem.size);
             
-            // Check if there's a gap that matches the item size and the drop position is within the gap area
-            const matchingGap = gameState.gaps.find(gap => {
+            console.log('Available gaps:', gameState.gaps.map(g => ({
+                x: g.x, y: g.y, 
+                size: g.size, 
+                filled: g.filled,
+                filledWith: g.filledWith ? g.filledWith.name : null
+            })));
+            
+            // Check if there's a gap that matches the item size (normal orientation)
+            let matchingGap = gameState.gaps.find(gap => {
+                console.log('Checking gap:', gap.x, gap.y, 'filled:', gap.filled, 'size:', gap.size);
                 if (gap.filled || 
                     gap.size.width !== draggedItem.size.width ||
                     gap.size.height !== draggedItem.size.height) {
+                    console.log('Gap rejected - filled or size mismatch');
                     return false;
                 }
                 
@@ -2061,15 +2568,42 @@
                                  gridPos.y >= gap.y && 
                                  gridPos.y < gap.y + gap.size.height;
                 
-                console.log('Checking gap at', gap.x, gap.y, 'size', gap.size, 'for drop at', gridPos.x, gridPos.y, 'within:', withinGap);
+                console.log('Within gap check:', withinGap);
                 return withinGap;
             });
+            
+            let needsRotation = false;
+            
+            // If no normal match, check for rotated match (for 3-cell items in vertical gaps)
+            if (!matchingGap && draggedItem.size.width === 3 && draggedItem.size.height === 1) {
+                matchingGap = gameState.gaps.find(gap => {
+                    if (gap.filled || 
+                        gap.size.width !== 1 || gap.size.height !== 3) {
+                        return false;
+                    }
+                    
+                    // Check if the drop position is anywhere within the gap area
+                    const withinGap = gridPos.x >= gap.x && 
+                                     gridPos.x < gap.x + gap.size.width &&
+                                     gridPos.y >= gap.y && 
+                                     gridPos.y < gap.y + gap.size.height;
+                    
+                    return withinGap;
+                });
+                
+                if (matchingGap) {
+                    needsRotation = true;
+                }
+            }
             
             if (matchingGap) {
                 // Check if all cells that the item would occupy are empty
                 let allCellsEmpty = true;
-                for (let dy = 0; dy < draggedItem.size.height; dy++) {
-                    for (let dx = 0; dx < draggedItem.size.width; dx++) {
+                const checkWidth = needsRotation ? draggedItem.size.height : draggedItem.size.width;
+                const checkHeight = needsRotation ? draggedItem.size.width : draggedItem.size.height;
+                
+                for (let dy = 0; dy < checkHeight; dy++) {
+                    for (let dx = 0; dx < checkWidth; dx++) {
                         if (!isGridPositionEmpty(matchingGap.x + dx, matchingGap.y + dy)) {
                             allCellsEmpty = false;
                             break;
@@ -2079,7 +2613,13 @@
                 }
                 
                 if (allCellsEmpty) {
-                    return { valid: true, gridX: matchingGap.x, gridY: matchingGap.y, gap: matchingGap };
+                    return { 
+                        valid: true, 
+                        gridX: matchingGap.x, 
+                        gridY: matchingGap.y, 
+                        gap: matchingGap,
+                        needsRotation: needsRotation
+                    };
                 }
             }
             
@@ -2109,10 +2649,21 @@
                     
                     graphics.clear();
                     
-                    // Check if this gap is compatible with the dragged item
-                    const isCompatible = !draggedItem || 
-                        (draggedItem.size.width === gapSize.width && 
-                         draggedItem.size.height === gapSize.height);
+                    // Check if this gap is compatible with the dragged item (including rotation)
+                    let isCompatible = false;
+                    if (!draggedItem) {
+                        isCompatible = false;
+                    } else {
+                        // Check normal orientation
+                        const normalMatch = (draggedItem.size.width === gapSize.width && 
+                                           draggedItem.size.height === gapSize.height);
+                        
+                        // Check rotated orientation (for 3-cell items in vertical gaps)
+                        const rotatedMatch = (draggedItem.size.width === 3 && draggedItem.size.height === 1 &&
+                                            gapSize.width === 1 && gapSize.height === 3);
+                        
+                        isCompatible = normalMatch || rotatedMatch;
+                    }
                     
                     if (show && isCompatible) {
                         // Show solid green highlight for compatible gaps
@@ -2262,6 +2813,15 @@
         function evaluateCircuit() {
             console.log('=== EVALUATING CIRCUIT ===');
             
+            // Check if all gaps are filled before testing
+            const unfilledGaps = gameState.gaps.filter(gap => !gap.filled);
+            if (unfilledGaps.length > 0) {
+                console.log('Not all gaps are filled:', unfilledGaps.length, 'remaining');
+                showFeedback(`Please fill all ${unfilledGaps.length} missing part${unfilledGaps.length > 1 ? 's' : ''} before testing the circuit!`, 'error');
+                updateLightBulb(false);
+                return false;
+            }
+            
             // Debug: Show current state of gaps
             console.log('Gap states:');
             gameState.gaps.forEach((gap, index) => {
@@ -2282,18 +2842,24 @@
         }
 
         function findCircuitPath() {
-            // Two-wire circuit: positive terminal -> top wire -> bulb -> bottom wire -> negative terminal
-            
-            // Check if we can trace a complete path from battery positive to battery negative through the bulb
-            // The path must go: battery positive -> L-wire -> top wire -> L-wire -> bulb -> L-wire -> bottom wire -> L-wire -> battery negative
-            // Updated for battery (1x3 at x=2, y=4-6) and bulb (3x3 at x=11-13, y=4-6)
-            
-            const topWireY = 4;        // Top wire row
-            const bottomWireY = 10;    // Bottom wire row
-            
             console.log('Checking circuit path...');
+            console.log('Current layout:', gameState.currentLayout);
             console.log('Battery at:', gameState.battery.x, gameState.battery.y, 'size:', gameState.battery.width + 'x' + gameState.battery.height);
             console.log('Bulb at:', gameState.bulb.x, gameState.bulb.y, 'size:', gameState.bulb.width + 'x' + gameState.bulb.height);
+            
+            if (gameState.currentLayout === 'second') {
+                // Second circuit layout with T-junctions
+                return findSecondCircuitPath();
+            } else {
+                // First circuit layout (original)
+                return findFirstCircuitPath();
+            }
+        }
+        
+        function findFirstCircuitPath() {
+            // Original two-wire circuit: positive terminal -> top wire -> bulb -> bottom wire -> negative terminal
+            const topWireY = 4;        // Top wire row
+            const bottomWireY = 10;    // Bottom wire row
             
             // Check path from battery L-wire to bulb L-wire via top wire (row 4)
             const topPathComplete = checkPathSegment(3, topWireY, 11, topWireY);
@@ -2315,9 +2881,107 @@
             console.log('Bulb L-wires connected:', bulbLWiresConnected);
             
             const circuitComplete = topPathComplete && bottomPathComplete && batteryVWiresConnected && batteryLWiresConnected && bulbVWiresConnected && bulbLWiresConnected;
-            console.log('Circuit complete:', circuitComplete);
+            console.log('First circuit complete:', circuitComplete);
             
             return circuitComplete;
+        }
+        
+        function findSecondCircuitPath() {
+            // Second circuit layout with T-junctions and multiple paths
+            // Battery position: (1, 6-8), Bulb position: (11-13, 6-8)
+            
+            // Check if battery connections are conductive
+            const batteryConnected = isConductive(1, 4) && isConductive(1, 5) && isConductive(1, 9) && isConductive(1, 10);
+            console.log('Battery connections:', batteryConnected);
+            
+            // Check if bulb connections are conductive  
+            const bulbConnected = isConductive(12, 4) && isConductive(12, 5) && isConductive(12, 9) && isConductive(12, 10);
+            console.log('Bulb connections:', bulbConnected);
+            
+            if (!batteryConnected || !bulbConnected) {
+                console.log('Battery or bulb not properly connected');
+                return false;
+            }
+            
+            // Check multiple possible paths using breadth-first search
+            const hasPath = findPathBFS();
+            console.log('Second circuit complete:', hasPath);
+            
+            return hasPath;
+        }
+        
+        function findPathBFS() {
+            // Use breadth-first search to find any complete path from battery to bulb
+            const startPositions = [
+                { x: 1, y: 4 }, // Battery top connection
+                { x: 1, y: 10 } // Battery bottom connection
+            ];
+            
+            const endPositions = [
+                { x: 12, y: 4 }, // Bulb top connection
+                { x: 12, y: 5 }, // Bulb side connections
+                { x: 12, y: 9 },
+                { x: 12, y: 10 } // Bulb bottom connection
+            ];
+            
+            for (const start of startPositions) {
+                for (const end of endPositions) {
+                    if (findPathBetweenPoints(start, end)) {
+                        console.log(`Found path from (${start.x},${start.y}) to (${end.x},${end.y})`);
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        function findPathBetweenPoints(start, end) {
+            const queue = [start];
+            const visited = new Set();
+            visited.add(`${start.x},${start.y}`);
+            
+            const directions = [
+                { dx: -1, dy: 0 }, // left
+                { dx: 1, dy: 0 },  // right  
+                { dx: 0, dy: -1 }, // up
+                { dx: 0, dy: 1 }   // down
+            ];
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                
+                // Check if we reached the end
+                if (current.x === end.x && current.y === end.y) {
+                    return true;
+                }
+                
+                // Explore adjacent positions
+                for (const dir of directions) {
+                    const nextX = current.x + dir.dx;
+                    const nextY = current.y + dir.dy;
+                    const key = `${nextX},${nextY}`;
+                    
+                    // Check bounds
+                    if (nextX < 0 || nextX >= gameState.gridWidth || 
+                        nextY < 0 || nextY >= gameState.gridHeight) {
+                        continue;
+                    }
+                    
+                    // Skip if already visited
+                    if (visited.has(key)) {
+                        continue;
+                    }
+                    
+                    // Check if position is conductive
+                    if (isConductive(nextX, nextY)) {
+                        visited.add(key);
+                        queue.push({ x: nextX, y: nextY });
+                    }
+                }
+            }
+            
+            return false;
         }
         
         function checkPathSegment(startX, startY, endX, endY) {
@@ -2518,17 +3182,27 @@
             // Draw the complete electrical path when circuit is active (without animation)
             if (!gameState.bulb.isLit) return;
             
-            console.log('Drawing continuous electrical path...');
+            console.log('Drawing continuous electrical path for layout:', gameState.currentLayout);
             
             // Create a special graphics object for the complete path
             const pathGraphics = scene.add.graphics();
             pathGraphics.lineStyle(6, 0xFFD700, 0.6); // Golden color for active path
             pathGraphics.setDepth(8); // Behind battery and bulb (depth 10) but above wires (depth 5)
             
-            // Draw the complete circuit path including through battery and bulb
-            const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
-            const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
+            if (gameState.currentLayout === 'first') {
+                drawFirstCircuitPath(pathGraphics);
+            } else if (gameState.currentLayout === 'second') {
+                drawSecondCircuitPath(pathGraphics);
+            }
             
+            pathGraphics.strokePath();
+            
+            // Store for cleanup
+            gameState.connectionGraphics.push(pathGraphics);
+        }
+        
+        function drawFirstCircuitPath(pathGraphics) {
+            // First circuit path (original logic)
             // Start from battery positive terminal (top cell)
             const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
@@ -2592,11 +3266,65 @@
             // End vertically at battery negative terminal (bottom cell)
             const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
             pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
+        }
+        
+        function drawSecondCircuitPath(pathGraphics) {
+            // Second circuit path with T-junctions
+            // Start from battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
             
-            pathGraphics.strokePath();
+            // Connect vertically to vertical wire at (1,5), then to L-shaped wire at (1,4), then horizontally to top wire at (2,4)
+            const batteryVWirePos = gridToWorld(1, 5);
+            pathGraphics.lineTo(batteryVWirePos.x, batteryVWirePos.y);
+            const batteryLWirePos = gridToWorld(1, 4);
+            pathGraphics.lineTo(batteryLWirePos.x, batteryLWirePos.y);
+            const batteryTopWirePos = gridToWorld(2, 4);
+            pathGraphics.lineTo(batteryTopWirePos.x, batteryTopWirePos.y);
             
-            // Store for cleanup
-            gameState.connectionGraphics.push(pathGraphics);
+            // Trace through top wire to bulb
+            for (let x = 2; x <= 12; x++) {
+                if (isConductive(x, 4)) { // Row 4 is top wire
+                    const pos = gridToWorld(x, 4);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect vertically to vertical wire at (12,5)
+            const bulbTopVWirePos = gridToWorld(12, 5);
+            pathGraphics.lineTo(bulbTopVWirePos.x, bulbTopVWirePos.y);
+            
+            // Connect to bulb (through the bulb component)
+            const bulbCenterPos = gridToWorld(gameState.bulb.x + 1, gameState.bulb.y + 1);
+            pathGraphics.lineTo(bulbCenterPos.x, bulbCenterPos.y);
+            
+            // Connect to vertical wire at (12,9)
+            const bulbBottomVWirePos = gridToWorld(12, 9);
+            pathGraphics.lineTo(bulbBottomVWirePos.x, bulbBottomVWirePos.y);
+            
+            // Connect vertically to bulb L-shaped wire at (12,10)
+            const bulbBottomLWirePos = gridToWorld(12, 10);
+            pathGraphics.lineTo(bulbBottomLWirePos.x, bulbBottomLWirePos.y);
+            
+            // Trace through bottom wire back to battery
+            for (let x = 12; x >= 2; x--) {
+                if (isConductive(x, 10)) { // Row 10 is bottom wire
+                    const pos = gridToWorld(x, 10);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect horizontally from bottom wire to battery L-shaped wire at (1,10)
+            const batteryBottomLWirePos = gridToWorld(1, 10);
+            pathGraphics.lineTo(batteryBottomLWirePos.x, batteryBottomLWirePos.y);
+            
+            // Connect vertically to vertical wire at (1,9)
+            const batteryBottomVWirePos = gridToWorld(1, 9);
+            pathGraphics.lineTo(batteryBottomVWirePos.x, batteryBottomVWirePos.y);
+            
+            // End vertically at battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
         }
 
 
@@ -2687,11 +3415,21 @@
         }
 
         function buildCompleteCircuitPath() {
+            console.log('Building circuit path for layout:', gameState.currentLayout);
+            
+            if (gameState.currentLayout === 'second') {
+                return buildSecondCircuitPath();
+            } else {
+                return buildFirstCircuitPath();
+            }
+        }
+
+        function buildFirstCircuitPath() {
             const path = [];
             const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
             
-            console.log('Building circuit path...');
+            console.log('Building first circuit path...');
             console.log('Battery position:', batteryPos);
             console.log('Bulb position:', bulbPos);
             
@@ -2765,9 +3503,92 @@
             const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
             path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
             
-            // End at bottom wire near battery (skip battery terminal to avoid overlap)
+            console.log(`First circuit path built with ${path.length} points`);
+            return path;
+        }
+
+        function buildSecondCircuitPath() {
+            const path = [];
             
-            console.log(`Complete circuit path built with ${path.length} points`);
+            console.log('Building second circuit path...');
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Connection vertically to vertical wire at (1,5)
+            const batteryVWirePos = gridToWorld(1, 5);
+            path.push({ x: batteryVWirePos.x, y: batteryVWirePos.y, isWire: true });
+            
+            // Connection to L-shaped wire at (1,4)
+            const batteryLWirePos = gridToWorld(1, 4);
+            path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
+            
+            // Connection horizontally to top wire at (2,4)
+            const batteryTopWirePos = gridToWorld(2, 4);
+            path.push({ x: batteryTopWirePos.x, y: batteryTopWirePos.y, isWire: true });
+            
+            // Top wire (positive path) from battery to T-junction
+            for (let x = 2; x <= 6; x++) {
+                if (isConductive(x, 4)) { // Row 4 is top wire
+                    const pos = gridToWorld(x, 4);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                    console.log(`Added top wire position: (${pos.x}, ${pos.y})`);
+                }
+            }
+            
+            // At T-junction (6,4), continue horizontally to bulb
+            for (let x = 6; x <= 12; x++) {
+                if (isConductive(x, 4)) { // Continue on row 4
+                    const pos = gridToWorld(x, 4);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                    console.log(`Added top wire position after T-junction: (${pos.x}, ${pos.y})`);
+                }
+            }
+            
+            // Connection vertically to vertical wire at (12,5)
+            const bulbTopVWirePos = gridToWorld(12, 5);
+            path.push({ x: bulbTopVWirePos.x, y: bulbTopVWirePos.y, isWire: true });
+            
+            // Connection to bulb (through the bulb component)
+            const bulbCenterPos = gridToWorld(gameState.bulb.x + 1, gameState.bulb.y + 1);
+            path.push({ x: bulbCenterPos.x, y: bulbCenterPos.y, isBulb: true });
+            
+            // Connection to vertical wire at (12,9)
+            const bulbBottomVWirePos = gridToWorld(12, 9);
+            path.push({ x: bulbBottomVWirePos.x, y: bulbBottomVWirePos.y, isWire: true });
+            
+            // Connection vertically to bulb L-shaped wire at (12,10)
+            const bulbBottomLWirePos = gridToWorld(12, 10);
+            path.push({ x: bulbBottomLWirePos.x, y: bulbBottomLWirePos.y, isWire: true });
+            
+            // Bottom wire (negative path) from bulb back to T-junction
+            for (let x = 12; x >= 6; x--) {
+                if (isConductive(x, 10)) { // Row 10 is bottom wire
+                    const pos = gridToWorld(x, 10);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                    console.log(`Added bottom wire position: (${pos.x}, ${pos.y})`);
+                }
+            }
+            
+            // At T-junction (6,10), continue horizontally to battery
+            for (let x = 6; x >= 1; x--) {
+                if (isConductive(x, 10)) { // Continue on row 10
+                    const pos = gridToWorld(x, 10);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                    console.log(`Added bottom wire position after T-junction: (${pos.x}, ${pos.y})`);
+                }
+            }
+            
+            // Connection vertically to vertical wire at (1,9)
+            const batteryBottomVWirePos = gridToWorld(1, 9);
+            path.push({ x: batteryBottomVWirePos.x, y: batteryBottomVWirePos.y, isWire: true });
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            console.log(`Second circuit path built with ${path.length} points`);
             return path;
         }
 
@@ -3272,68 +4093,180 @@
             // Reset the current game first
             resetGame();
             
-            // Create a variation by changing gap positions slightly
-            const challengeVariations = [
-                // Original pattern
-                [
-                    { x: 3, y: 3 }, { x: 5, y: 3 }, { x: 7, y: 3 },
-                    { x: 7, y: 5 }, { x: 5, y: 5 }, { x: 3, y: 5 }
+            // Cycle through available circuit layouts
+            const availableLayouts = Object.keys(gameState.circuitLayouts);
+            const currentIndex = availableLayouts.indexOf(gameState.currentLayout);
+            const nextIndex = (currentIndex + 1) % availableLayouts.length;
+            const nextLayout = availableLayouts[nextIndex];
+            
+            // Load the next circuit layout
+            loadCircuitLayout(nextLayout);
+            
+            // Show appropriate challenge message
+            const challengeMessages = {
+                first: [
+                    '🔄 Back to the basics! Simple two-wire circuit.',
+                    '⚡ Classic Circuit! Fill the gaps to complete the path.',
+                    '🎯 Original Challenge! Connect battery to bulb.'
                 ],
-                // Variation 1: Different gap spacing
-                [
-                    { x: 2, y: 3 }, { x: 4, y: 3 }, { x: 6, y: 3 }, { x: 8, y: 3 },
-                    { x: 8, y: 5 }, { x: 6, y: 5 }, { x: 4, y: 5 }, { x: 2, y: 5 }
-                ],
-                // Variation 2: Fewer gaps (easier)
-                [
-                    { x: 4, y: 3 }, { x: 6, y: 3 },
-                    { x: 6, y: 5 }, { x: 4, y: 5 }
+                second: [
+                    '🆕 New Challenge! Complex circuit with T-junctions and multiple paths!',
+                    '⚡ Fresh Circuit! Can you solve this advanced layout?',
+                    '🎯 Challenge Mode! Navigate the T-shaped connectors!'
                 ]
-            ];
+            };
             
-            // Select a random variation (excluding current one)
-            const currentPattern = JSON.stringify(gameState.gaps.map(g => ({x: g.x, y: g.y})));
-            const availableVariations = challengeVariations.filter(v => 
-                JSON.stringify(v) !== currentPattern
-            );
+            const messages = challengeMessages[nextLayout] || ['🆕 New Challenge! Try this circuit layout!'];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            showFeedback(randomMessage, 'info');
             
-            if (availableVariations.length > 0) {
-                const newPattern = availableVariations[Math.floor(Math.random() * availableVariations.length)];
-                
-                // Clear existing gaps
-                gameState.gaps.forEach(gap => {
-                    if (gap.sprite) {
-                        gap.sprite.destroy();
+            console.log('New challenge created with layout:', nextLayout);
+        }
+
+
+
+        function clearExistingComponents() {
+            console.log('Clearing existing components...');
+            
+            // Clear all sprites from the scene more aggressively
+            if (scene && scene.children) {
+                const children = scene.children.list.slice(); // Create a copy to avoid modification during iteration
+                children.forEach(child => {
+                    // Skip the grid graphics (they should persist)
+                    if (child && child.type !== 'Graphics' || (child.type === 'Graphics' && child.lineStyle)) {
+                        try {
+                            child.destroy();
+                        } catch (error) {
+                            console.warn('Error destroying child:', error);
+                        }
                     }
                 });
-                
-                // Create new gap pattern
-                gameState.gaps = newPattern.map(pos => ({
-                    x: pos.x,
-                    y: pos.y,
-                    filled: false,
-                    sprite: null
-                }));
-                
-                // Recreate gap visuals
-                markGaps();
-                
-                // Show challenge message
-                const challengeMessages = [
-                    '🆕 New Challenge! Different gap pattern - try it out!',
-                    '⚡ Fresh Circuit! Can you solve this new layout?',
-                    '🎯 Challenge Mode! New gaps to fill with conductors!'
-                ];
-                
-                const randomMessage = challengeMessages[Math.floor(Math.random() * challengeMessages.length)];
-                showFeedback(randomMessage, 'info');
-                
-                console.log('New challenge created with different gap pattern');
-            } else {
-                // Fallback to original reset with encouraging message
-                showFeedback('🔄 Try the same circuit with different materials!', 'info');
-                console.log('New challenge created - same pattern, try different materials');
             }
+            
+            // Clear battery sprite
+            if (gameState.battery && gameState.battery.sprite) {
+                try {
+                    gameState.battery.sprite.destroy();
+                } catch (error) {
+                    console.warn('Error destroying battery sprite:', error);
+                }
+                gameState.battery.sprite = null;
+            }
+            
+            // Clear bulb sprite and glow effect
+            if (gameState.bulb && gameState.bulb.sprite) {
+                try {
+                    gameState.bulb.sprite.destroy();
+                } catch (error) {
+                    console.warn('Error destroying bulb sprite:', error);
+                }
+                gameState.bulb.sprite = null;
+            }
+            if (gameState.bulb && gameState.bulb.glowEffect) {
+                try {
+                    gameState.bulb.glowEffect.destroy();
+                } catch (error) {
+                    console.warn('Error destroying glow effect:', error);
+                }
+                gameState.bulb.glowEffect = null;
+            }
+            if (gameState.bulb && gameState.bulb.bulbSprite) {
+                gameState.bulb.bulbSprite = null;
+            }
+            if (gameState.bulb) {
+                gameState.bulb.isLit = false;
+            }
+            
+            // Clear existing gaps
+            if (gameState.gaps) {
+                gameState.gaps.forEach(gap => {
+                    if (gap.sprite) {
+                        try {
+                            gap.sprite.destroy();
+                        } catch (error) {
+                            console.warn('Error destroying gap sprite:', error);
+                        }
+                        gap.sprite = null;
+                    }
+                });
+            }
+            
+            // Clear existing preplaced wires
+            if (gameState.preplacedWires) {
+                gameState.preplacedWires.forEach(wire => {
+                    if (wire.sprite) {
+                        try {
+                            wire.sprite.destroy();
+                        } catch (error) {
+                            console.warn('Error destroying wire sprite:', error);
+                        }
+                        wire.sprite = null;
+                    }
+                });
+            }
+            
+            // Clear connection graphics
+            if (gameState.connectionGraphics) {
+                gameState.connectionGraphics.forEach(graphic => {
+                    if (graphic) {
+                        try {
+                            graphic.destroy();
+                        } catch (error) {
+                            console.warn('Error destroying connection graphic:', error);
+                        }
+                    }
+                });
+                gameState.connectionGraphics = [];
+            }
+            
+            // Completely clear and reinitialize the grid
+            clearGridCompletely();
+            
+            // Redraw the grid lines
+            drawGrid();
+            
+            console.log('All components cleared');
+        }
+        
+        function clearGridCompletely() {
+            // Clear all grid positions
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    gameState.grid[y][x] = null;
+                }
+            }
+            console.log('Grid completely cleared');
+        }
+        
+        function loadCircuitLayout(layoutName) {
+            console.log('Loading circuit layout:', layoutName);
+            
+            if (!gameState.circuitLayouts[layoutName]) {
+                console.error('Circuit layout not found:', layoutName);
+                return;
+            }
+            
+            const layout = gameState.circuitLayouts[layoutName];
+            
+            // Clear everything first
+            clearExistingComponents();
+            
+            // Set current layout
+            gameState.currentLayout = layoutName;
+            
+            // Load layout configuration
+            gameState.battery = { ...layout.battery, sprite: null };
+            gameState.bulb = { ...layout.bulb, sprite: null, isLit: false };
+            gameState.gaps = layout.gaps.map(gap => ({ ...gap, sprite: null }));
+            gameState.preplacedWires = layout.preplacedWires.map(wire => ({ ...wire, sprite: null }));
+            
+            // Recreate all components
+            createCircuitComponents();
+            
+            // Update wire connections
+            updateWireConnections();
+            
+            console.log('Circuit layout loaded:', layoutName);
         }
 
         function resetGame() {
@@ -3491,10 +4424,21 @@
             // Update wire connections to show base circuit only
             updateWireConnections();
             
+            // Reset to first circuit layout if we're not already there
+            if (gameState.currentLayout !== 'first') {
+                resetToFirstCircuitLayout();
+            }
+            
             // Reset feedback to initial state
             showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.', 'info');
             
             console.log('Complete game reset finished - all items returned to bank, gaps cleared, bulb off');
+        }
+
+        function resetToFirstCircuitLayout() {
+            // Load the first circuit layout using the new system
+            loadCircuitLayout('first');
+            console.log('Reset to first circuit layout');
         }
 
         document.getElementById('reset-btn').addEventListener('click', function() {

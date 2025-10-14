@@ -212,7 +212,7 @@
 
 - [x] 17. Replace game items with image assets
 
-y
+
 
 
 
