@@ -305,13 +305,258 @@ function resetItemBankQuantities() {
 - **Visual Feedback**: Clear indication of invalid actions
 - **Performance**: Limit evaluation frequency to prevent lag
 
+## Short Circuit Detection System
+
+### Short Circuit Logic
+```javascript
+function detectShortCircuit() {
+  // Check for short circuit condition in Stage 2
+  if (gameState.currentStage !== 2) return false;
+  
+  // Check if conductor is placed in the critical 3-slot position (6,6) to (6,8)
+  const criticalPositions = [{x: 6, y: 6}, {x: 6, y: 7}, {x: 6, y: 8}];
+  const hasConductorInCriticalPath = criticalPositions.every(pos => {
+    const item = getItemAtPosition(pos.x, pos.y);
+    return item && item.conductive;
+  });
+  
+  if (hasConductorInCriticalPath) {
+    // Check if this creates a direct path bypassing the bulb
+    const shortCircuitPath = findDirectBatteryPath();
+    return shortCircuitPath.length > 0;
+  }
+  
+  return false;
+}
+
+function findDirectBatteryPath() {
+  // Find path from battery + terminal to battery - terminal that bypasses bulb
+  const startPos = {x: gameState.battery.x + 1, y: gameState.battery.y};
+  const endPos = {x: gameState.battery.x - 1, y: gameState.battery.y};
+  
+  return findPathExcludingBulb(startPos, endPos);
+}
+```
+
+### Short Circuit Visual Feedback
+```javascript
+function displayShortCircuitFeedback() {
+  // Show red current flow animation
+  animateCurrentFlow({
+    path: getShortCircuitPath(),
+    color: 0xFF0000, // Red color for danger
+    speed: 2.0, // Faster animation to show high current
+    particles: true
+  });
+  
+  // Keep bulb off
+  updateLightBulb(false);
+  
+  // Show warning modal
+  showShortCircuitModal();
+}
+
+function showShortCircuitModal() {
+  const modalContent = {
+    title: "⚠️ Short Circuit Detected!",
+    message: `
+      <p>Oops! You've created a short circuit. The electricity is taking a shortcut and bypassing the light bulb!</p>
+      
+      <h4>What is a Short Circuit?</h4>
+      <p>A short circuit happens when electricity finds an easier path than the one we want it to take. Instead of flowing through the light bulb, it's going directly from the battery's + side to the - side.</p>
+      
+      <h4>Why is this a problem?</h4>
+      <p>• The light bulb won't work because electricity isn't flowing through it</p>
+      <p>• Too much electricity flows too fast, which can be dangerous</p>
+      <p>• In real life, this could damage equipment or cause fires</p>
+      
+      <h4>How to fix it:</h4>
+      <p>• Make sure electricity has to flow through the light bulb</p>
+      <p>• Use insulators to block unwanted paths</p>
+      <p>• Check that your circuit follows the intended path</p>
+    `,
+    buttons: [
+      { text: "Try Again", action: "close" },
+      { text: "Reset Circuit", action: "reset" }
+    ]
+  };
+  
+  createModal(modalContent);
+}
+```
+
+### Enhanced Circuit Evaluation
+```javascript
+function evaluateCircuitWithShortCheck() {
+  // First check for short circuit
+  if (detectShortCircuit()) {
+    gameState.circuitState = 'short_circuit';
+    displayShortCircuitFeedback();
+    return false;
+  }
+  
+  // Normal circuit evaluation
+  const hasValidPath = findCircuitPath(
+    gameState.battery.x + 1, gameState.battery.y,
+    gameState.bulb.x, gameState.bulb.y,
+    gameState.grid
+  );
+  
+  if (hasValidPath) {
+    gameState.circuitState = 'complete';
+    gameState.bulb.isLit = true;
+    displaySuccessFeedback();
+    return true;
+  } else {
+    gameState.circuitState = 'incomplete';
+    gameState.bulb.isLit = false;
+    return false;
+  }
+}
+```
+
+## Stage 3: Series Circuit Design
+
+### Series Circuit Layout
+Stage 3 introduces a more complex series circuit with dual light bulbs to teach students about series connections:
+
+```
+Grid Layout (15x15):
+   0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+0  . . . . . . . . . . .  .  .  .  .
+1  . . . . . . . . . . .  .  .  .  .
+2  . . . . . . . . . . .  .  .  .  .
+3  . . . . . . . O O O .  .  .  .  .
+4  . L W W M M W O O O W  W  L  .  .
+5  . W . . . . . O O O .  .  W  .  .
+6  . B . . . . . . . . .  .  M  .  .
+7  . B . . . . . . . . .  .  M  .  .
+8  . B . . . . . . . . .  .  M  .  .
+9  . W . . . . . O O O .  .  W  .  .
+10 . L W W M W W O O O W  W  L  .  .
+11 . . . . . . . O O O .  .  .  .  .
+12 . . . . . . . . . . .  .  .  .  .
+13 . . . . . . . . . . .  .  .  .  .
+14 . . . . . . . . . . .  .  .  .  .
+
+Legend:
+. = Empty Grid Cell
+L = L-shaped wire
+B = Battery
+O = Light Bulb
+W = Straight Wire
+M = Missing Part Indicator
+```
+
+### Series Circuit Configuration
+```javascript
+const STAGE_3_CONFIG = {
+  title: "Stage 3: Series Circuit",
+  battery: { x: 1, y: 6, width: 1, height: 3 },
+  lightBulbs: [
+    { x: 7, y: 3, width: 3, height: 1, id: 'bulb1' },
+    { x: 7, y: 11, width: 3, height: 1, id: 'bulb2' }
+  ],
+  wires: [
+    // L-shaped wires
+    { x: 1, y: 4, type: 'L-wire', rotation: 0 },
+    { x: 1, y: 10, type: 'L-wire', rotation: 270 },
+    { x: 10, y: 4, type: 'L-wire', rotation: 90 },
+    { x: 10, y: 10, type: 'L-wire', rotation: 180 },
+    
+    // Straight wires
+    { x: 2, y: 4, type: 'straight-wire' },
+    { x: 3, y: 4, type: 'straight-wire' },
+    { x: 7, y: 4, type: 'straight-wire' },
+    { x: 11, y: 4, type: 'straight-wire' },
+    { x: 12, y: 4, type: 'straight-wire' },
+    
+    { x: 2, y: 10, type: 'straight-wire' },
+    { x: 3, y: 10, type: 'straight-wire' },
+    { x: 7, y: 10, type: 'straight-wire' },
+    { x: 11, y: 10, type: 'straight-wire' },
+    { x: 12, y: 10, type: 'straight-wire' },
+    
+    { x: 1, y: 5, type: 'straight-wire' },
+    { x: 1, y: 9, type: 'straight-wire' },
+    { x: 12, y: 5, type: 'straight-wire' },
+    { x: 12, y: 9, type: 'straight-wire' }
+  ],
+  missingParts: [
+    { x: 4, y: 4, width: 3, height: 1 }, // Top horizontal gap
+    { x: 4, y: 10, width: 3, height: 1 }, // Bottom horizontal gap
+    { x: 6, y: 6, width: 1, height: 3 }, // Left vertical gap
+    { x: 12, y: 6, width: 1, height: 3 } // Right vertical gap
+  ]
+};
+```
+
+### Series Circuit Evaluation Logic
+```javascript
+function evaluateSeriesCircuit() {
+  // For series circuits, ALL gaps must be filled with conductors
+  const allGapsFilled = gameState.missingParts.every(gap => {
+    return isGapFilledWithConductor(gap);
+  });
+  
+  if (!allGapsFilled) {
+    // Turn off both bulbs if any gap is unfilled or has insulator
+    gameState.lightBulbs.forEach(bulb => bulb.isLit = false);
+    return false;
+  }
+  
+  // Check for complete series path from battery through both bulbs
+  const seriesPath = findSeriesPath();
+  const isComplete = seriesPath.includesBothBulbs && seriesPath.isComplete;
+  
+  // Both bulbs light up simultaneously in series
+  gameState.lightBulbs.forEach(bulb => bulb.isLit = isComplete);
+  
+  return isComplete;
+}
+
+function findSeriesPath() {
+  // Find path that goes: Battery → Bulb1 → Bulb2 → Battery
+  // or: Battery → Bulb2 → Bulb1 → Battery
+  const startPos = { x: gameState.battery.x + 1, y: gameState.battery.y + 1 };
+  const endPos = { x: gameState.battery.x - 1, y: gameState.battery.y + 1 };
+  
+  const path = findPathThroughBothBulbs(startPos, endPos);
+  
+  return {
+    isComplete: path.length > 0,
+    includesBothBulbs: path.includesBulb1 && path.includesBulb2,
+    path: path
+  };
+}
+```
+
+### Educational Content for Stage 3
+```javascript
+const STAGE_3_EDUCATION = {
+  title: "What you learned about Series Circuits:",
+  content: [
+    "🔗 Series circuits connect components in a single path",
+    "⚡ Electricity must flow through ALL components in order",
+    "💡 If one component breaks, the whole circuit stops working",
+    "🎄 Examples: Old Christmas lights, flashlights, some car headlights",
+    "🔄 Different from parallel circuits where components have separate paths",
+    "🔧 Series circuits are simpler but less reliable than parallel circuits"
+  ]
+};
+```
+
 ## Testing Strategy
 
 ### Manual Testing Approach
 1. **Basic Functionality**: Test drag-and-drop, circuit evaluation, and success modal
 2. **Game Flow**: Verify complete gameplay from start to successful circuit completion
 3. **Educational Value**: Ensure the game clearly demonstrates conductor vs insulator behavior
-4. **Browser Compatibility**: Test in major browsers (Chrome, Firefox, Safari, Edge)
+4. **Short Circuit Testing**: Verify short circuit detection and appropriate warning messages
+5. **Safety Education**: Confirm age-appropriate explanations of electrical safety concepts
+6. **Series Circuit Testing**: Verify that both bulbs light up only when all gaps are filled with conductors
+7. **Stage Progression**: Test progression from Stage 2 to Stage 3 and educational content display
+8. **Browser Compatibility**: Test in major browsers (Chrome, Firefox, Safari, Edge)
 
 ## Visual Design
 

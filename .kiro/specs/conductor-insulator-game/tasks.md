@@ -228,7 +228,10 @@
   - Maintain existing drag-and-drop functionality with image sprites
   - _Requirements: 2.4, 4.1_
 
-- [-] 18. Implement multi-stage system and stage progression
+- [x] 18. Implement multi-stage system and stage progression
+
+
+
 
 
   - Create stage management system to track current stage
@@ -272,9 +275,95 @@
   - Verify that multi-cell items maintain proper proportions during drag
   - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
 
+- [x] 25. Clear red line indicators when switching stages
+
+
+
+
+
+  - Update stage switching functionality to clear any existing red current flow animations
+  - Ensure red line indicators from short circuit conditions are removed when loading new stages
+  - Clear any visual artifacts from previous short circuit states during stage transitions
+  - _Requirements: 19.11_
+
 - [ ]* 23. Add educational enhancements and additional features
   - Include explanatory text about conductors and insulators
   - Add sound effects for interactions and success
   - Create additional difficulty levels with different circuit layouts
   - Add hint system to guide players toward correct solutions
   - _Requirements: 4.1, 4.2, 4.3_ 
+- [x] 24. Implement short circuit detection and warning system for Stage 2
+
+
+
+  - Create detectShortCircuit function to identify when conductor is placed in critical 3-slot position (6,6) to (6,8)
+  - Implement findDirectBatteryPath function to detect paths that bypass the light bulb
+  - Update circuit evaluation system to check for short circuits before normal evaluation
+  - Create red current flow animation for short circuit conditions instead of normal yellow flow
+  - Keep light bulb off when short circuit is detected
+  - Create short circuit warning modal with age-appropriate explanation of short circuits and safety hazards
+  - Include educational content about what short circuits are and how to avoid them
+  - Add "Try Again" and "Reset Circuit" options to the warning modal
+  - Ensure short circuit detection only applies to Stage 2 circuit layout
+  - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7, 19.8, 19.9, 19.10_
+
+- [x] 26. Add educational "What you learned" section to Stage 2 success modal
+
+
+
+
+
+  - Modify Stage 2 success modal to include a "What you learned" section below the congratulatory content
+  - Add age-appropriate explanation of what short circuits are and why they're dangerous
+  - Explain that short circuits happen when electricity takes an unintended shortcut path
+  - Include information about how short circuits can be dangerous due to excessive current flow
+  - Mention real-world safety concerns like equipment damage and fire hazards
+  - Explain how parallel circuits (like Stage 2) provide multiple safe paths for electricity
+  - Use simple, child-friendly language appropriate for the target audience
+  - Maintain celebratory tone while adding educational value
+  - Ensure the educational content enhances rather than overwhelms the success experience
+  - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8, 20.9, 20.10_
+
+- [ ] 27. Create Stage 3 "Series Circuit" layout with dual light bulbs
+  - Design Stage 3 circuit configuration with battery positioned at (1, 4) to (1, 8)
+  - Position two light bulbs at (7, 3) to (9, 3) and (7, 11) to (9, 11)
+  - Add L-shaped wires at positions (1, 4), (1, 10), (10, 4), and (10, 10)
+  - Create straight wire connections forming a complete series circuit path
+  - Position missing part indicators at (4, 4) to (6, 4), (4, 10) to (6, 10), (6, 6) to (6, 8), and (12, 6) to (12, 8)
+  - Center the entire Stage 3 circuit layout within the 15x15 grid
+  - _Requirements: 21.4, 21.5, 21.6, 21.7, 21.8, 22.1, 22.2_
+
+- [ ] 28. Implement series circuit evaluation logic for Stage 3
+  - Update circuit evaluation system to handle dual light bulb configuration
+  - Ensure both light bulbs light up simultaneously when circuit is complete
+  - Implement logic that keeps both bulbs off if any gap exists or insulator is placed
+  - Create path finding that verifies complete series connection through both bulbs
+  - Update visual feedback to show current flow through the entire series path
+  - _Requirements: 21.9, 21.10, 22.3, 22.4, 22.6, 22.7, 22.8_
+
+- [x] 29. Add Stage 3 progression and educational content
+
+
+
+
+
+  - Update Stage 2 success modal to include "Next Stage" button
+  - Implement stage switching functionality to load Stage 3 from Stage 2
+  - Add "Stage 3: Series Circuit" title display
+  - Create Stage 3 success modal with educational "What you learned" section
+  - Include age-appropriate explanation of series circuits and how they work
+  - Explain that series circuits require all components to be connected in a single path
+  - Add real-world examples like old Christmas lights or flashlights
+  - Compare series circuits to parallel circuits from Stage 2
+  - Clearly define what a series circuit is using simple terms like "components connected one after another in a chain"
+  - Emphasize that all parts must work together for the circuit to function
+  - Include visual metaphors that children can understand, such as comparing it to a chain where if one link breaks, the whole chain fails
+  - _Requirements: 21.1, 21.2, 21.3, 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7, 23.8, 23.9, 23.10, 23.11, 23.12, 23.13_
+
+- [ ] 30. Update visual connection system for series circuit with dual bulbs
+  - Modify wire rendering system to handle series circuit with two light bulbs
+  - Create continuous wire connections showing battery → first bulb → second bulb → battery path
+  - Update connection graphics to demonstrate series current flow through both bulbs
+  - Ensure visual clarity when showing the single series path through multiple components
+  - Maintain proper terminal connections for dual bulb configuration
+  - _Requirements: 22.2, 22.5, 22.8_

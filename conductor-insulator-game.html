@@ -28,9 +28,23 @@
         .game-subtitle {
             color: rgba(255,255,255,0.9);
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
             font-size: 1.1em;
             font-weight: 300;
+        }
+        
+        .stage-title-display {
+            color: rgba(255,255,255,0.95);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.3em;
+            font-weight: 600;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
         }
         
         #game-container {
@@ -43,6 +57,93 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0,0,0,0.2);
             border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+        }
+        
+        #canvas-container {
+            position: relative;
+        }
+        
+        #stage-menu-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        #stage-menu-btn:hover {
+            background-color: #1976D2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        #stage-selector {
+            position: absolute;
+            top: 45px;
+            right: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            border: 1px solid rgba(0,0,0,0.1);
+            z-index: 99;
+            min-width: 180px;
+            display: none;
+        }
+        
+        .stage-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stage-option:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .stage-option:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .stage-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .stage-option.active {
+            background-color: #E3F2FD;
+            color: #1976D2;
+            font-weight: bold;
+        }
+        
+        .stage-icon {
+            font-size: 16px;
+        }
+        
+        .stage-info {
+            flex: 1;
+        }
+        
+        .stage-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .stage-description {
+            font-size: 12px;
+            color: #666;
         }
         
         #right-panel {
@@ -274,6 +375,7 @@
             margin-bottom: 8px;
             color: #2E7D32;
             font-weight: 500;
+            list-style: none;
         }
         
         .conductor-text {
@@ -399,15 +501,63 @@
             .controls-row button {
                 width: 100%;
             }
+            
+            #stage-menu-btn {
+                top: 5px;
+                right: 5px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            #stage-selector {
+                top: 35px;
+                right: 5px;
+                min-width: 160px;
+            }
+            
+            .stage-option {
+                padding: 10px 12px;
+            }
+            
+            .stage-description {
+                font-size: 11px;
+            }
         }
     </style>
 </head>
 <body>
     <h1>⚡ Conductor & Insulator Circuit Game</h1>
     <p class="game-subtitle">Learn about electricity by building circuits with different materials!</p>
+    <div id="stage-title" class="stage-title-display">Stage 1: Basic Circuit</div>
     
     <div id="game-container">
-        <div id="game-canvas"></div>
+        <div id="canvas-container">
+            <button id="stage-menu-btn">📋 Stages</button>
+            <div id="stage-selector">
+                <div class="stage-option active" data-stage="first">
+                    <span class="stage-icon">⚡</span>
+                    <div class="stage-info">
+                        <div class="stage-title">Stage 1</div>
+                        <div class="stage-description">Basic Circuit</div>
+                    </div>
+                </div>
+                <div class="stage-option" data-stage="second">
+                    <span class="stage-icon">⚠️</span>
+                    <div class="stage-info">
+                        <div class="stage-title">Stage 2</div>
+                        <div class="stage-description">Short Circuit</div>
+                    </div>
+                </div>
+                <div class="stage-option" data-stage="third">
+                    <span class="stage-icon">🔗</span>
+                    <div class="stage-info">
+                        <div class="stage-title">Stage 3</div>
+                        <div class="stage-description">Series Circuit</div>
+                    </div>
+                </div>
+            </div>
+            <div id="game-canvas"></div>
+        </div>
         <div id="right-panel">
             <div id="item-bank">
                 <h3>Item Bank</h3>
@@ -419,7 +569,7 @@
             <div id="controls">
                 <div class="controls-row">
                     <button id="test-circuit-btn">⚡ Test Circuit</button>
-                    <button id="reset-btn">🔄 Reset Game</button>
+                    <button id="reset-btn">🔄 Reset Stage</button>
                 </div>
                 <div id="feedback-area">
                     Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.
@@ -541,7 +691,8 @@
             ],
             draggedItem: null,
             isDragging: false,
-            connectionGraphics: [] // Store connection graphics for cleanup
+            connectionGraphics: [], // Store connection graphics for cleanup
+            circuitState: 'incomplete' // Track circuit state: 'incomplete', 'complete', 'short_circuit'
         };
 
         // Define all circuit layouts
@@ -615,6 +766,58 @@
                     { x: 10, y: 10 }, // H - Horizontal wire
                     { x: 11, y: 10 }, // H - Horizontal wire
                     { x: 12, y: 10 }  // L - L-shaped wire (bulb connection)
+                ]
+            },
+            third: {
+                battery: { x: 2, y: 6, width: 1, height: 3 },  // B at (2,6), (2,7), (2,8)
+                bulbs: [
+                    { x: 7, y: 3, width: 3, height: 3, id: 'bulb1', isLit: false },  // First bulb at (7,3) to (9,5)
+                    { x: 7, y: 9, width: 3, height: 3, id: 'bulb2', isLit: false }   // Second bulb at (7,9) to (9,11)
+                ],
+                gaps: [
+                    // Top horizontal gap: (4,4) to (5,4) = 2x1 gap
+                    { x: 4, y: 4, filled: false, size: { width: 2, height: 1 } },
+                    // Bottom horizontal gap: (4,10) = 1x1 gap  
+                    { x: 4, y: 10, filled: false, size: { width: 1, height: 1 } },
+                    // Right vertical gap: (12,6) to (12,8) = 1x3 gap
+                    { x: 12, y: 6, filled: false, size: { width: 1, height: 3 } }
+                ],
+                preplacedWires: [
+                    // L-shaped wires at corners
+                    { x: 2, y: 4 },   // L - Top left L-shaped wire
+                    { x: 2, y: 10 },  // L - Bottom left L-shaped wire  
+                    { x: 12, y: 4 },  // L - Top right L-shaped wire
+                    { x: 12, y: 10 }, // L - Bottom right L-shaped wire
+                    
+                    // Top horizontal wire connections (row 4)
+                    { x: 3, y: 4 },   // W - Horizontal wire
+                    // Gap at (4,4) to (5,4) - M M
+                    { x: 6, y: 4 },   // W - Horizontal wire after gap (connects to bulb)
+                    { x: 7, y: 4 },   // W - Horizontal wire (under bulb)
+                    { x: 8, y: 4 },   // W - Horizontal wire (under bulb)
+                    { x: 9, y: 4 },   // W - Horizontal wire (under bulb)
+                    { x: 10, y: 4 },  // W - Horizontal wire
+                    { x: 11, y: 4 },  // W - Horizontal wire
+                    
+                    // Bottom horizontal wire connections (row 10)
+                    { x: 3, y: 10 },  // W - Horizontal wire
+                    // Gap at (4,10) - M
+                    { x: 5, y: 10 },  // W - Horizontal wire after gap
+                    { x: 6, y: 10 },  // W - Horizontal wire (connects to bulb)
+                    { x: 7, y: 10 },  // W - Horizontal wire (under bulb)
+                    { x: 8, y: 10 },  // W - Horizontal wire (under bulb)
+                    { x: 9, y: 10 },  // W - Horizontal wire (under bulb)
+                    { x: 10, y: 10 }, // W - Horizontal wire
+                    { x: 11, y: 10 }, // W - Horizontal wire
+                    
+                    // Vertical wire connections on left side (adjacent to battery)
+                    { x: 2, y: 5 },   // W - Vertical wire (battery connection)
+                    { x: 2, y: 9 },   // W - Vertical wire (battery connection)
+                    
+                    // Vertical wire connections on right side (adjacent to 3-cell missing part)
+                    { x: 12, y: 5 },  // W - Vertical wire
+                    { x: 12, y: 9 }   // W - Vertical wire
+                    // Gap at (12,6) to (12,8) - M M M for right vertical connection
                 ]
             }
         };
@@ -708,19 +911,20 @@
         function drawGrid() {
             const graphics = scene.add.graphics();
             graphics.lineStyle(1, 0xcccccc, 0.3);
+            graphics.setDepth(0); // Set grid to lowest depth so it appears behind everything
             
-            // Draw vertical lines
+            // Draw vertical lines - offset by 0.5 pixels to avoid edge clipping
             for (let x = 0; x <= gameState.gridWidth; x++) {
-                const worldX = x * gameState.cellSize;
-                graphics.moveTo(worldX, 0);
-                graphics.lineTo(worldX, gameState.gridHeight * gameState.cellSize);
+                const worldX = x * gameState.cellSize + 0.5;
+                graphics.moveTo(worldX, 0.5);
+                graphics.lineTo(worldX, gameState.gridHeight * gameState.cellSize - 0.5);
             }
             
-            // Draw horizontal lines
+            // Draw horizontal lines - offset by 0.5 pixels to avoid edge clipping
             for (let y = 0; y <= gameState.gridHeight; y++) {
-                const worldY = y * gameState.cellSize;
-                graphics.moveTo(0, worldY);
-                graphics.lineTo(gameState.gridWidth * gameState.cellSize, worldY);
+                const worldY = y * gameState.cellSize + 0.5;
+                graphics.moveTo(0.5, worldY);
+                graphics.lineTo(gameState.gridWidth * gameState.cellSize - 0.5, worldY);
             }
             
             graphics.strokePath();
@@ -786,21 +990,35 @@
         }
 
         function createLightBulb() {
-            // Light bulb now spans 3x3 cells (width=3, height=3)
-            const centerX = gameState.bulb.x + 1; // Center of 3x3 grid
-            const centerY = gameState.bulb.y + 1; // Center of 3x3 grid
+            // Handle single bulb (Stage 1 & 2) or dual bulbs (Stage 3)
+            if (gameState.bulbs) {
+                // Stage 3: Create multiple bulbs
+                gameState.bulbs.forEach((bulb, index) => {
+                    createSingleBulb(bulb, `bulb${index + 1}`);
+                });
+            } else if (gameState.bulb) {
+                // Stage 1 & 2: Create single bulb
+                createSingleBulb(gameState.bulb, 'bulb');
+            }
+        }
+        
+        function createSingleBulb(bulbConfig, bulbId) {
+            // Calculate center position based on bulb dimensions
+            const centerX = bulbConfig.x + (bulbConfig.width - 1) / 2;
+            const centerY = bulbConfig.y + (bulbConfig.height - 1) / 2;
             const pos = gridToWorld(centerX, centerY);
             
-            // Create light bulb using spritesheet (frame 0 = off, frame 1 = on) - sized to fill 3x3 cells completely
+            // Create light bulb using spritesheet (frame 0 = off, frame 1 = on)
             let bulbSprite;
             if (scene.textures.exists('lightbulb')) {
                 bulbSprite = scene.add.sprite(pos.x, pos.y, 'lightbulb', 0);
-                bulbSprite.setDisplaySize(gameState.cellSize * 3, gameState.cellSize * 3); // Full 3x3 cells
-                console.log('Light bulb sprite created successfully');
+                bulbSprite.setDisplaySize(gameState.cellSize * bulbConfig.width, gameState.cellSize * bulbConfig.height);
+                console.log(`Light bulb sprite ${bulbId} created successfully`);
             } else {
-                console.error('Light bulb texture not found, creating fallback');
-                // Create fallback colored circle for full 3x3 cells
-                bulbSprite = scene.add.circle(pos.x, pos.y, gameState.cellSize * 1.5, 0xFFFFFF);
+                console.error(`Light bulb texture not found for ${bulbId}, creating fallback`);
+                // Create fallback colored circle
+                const radius = Math.min(bulbConfig.width, bulbConfig.height) * gameState.cellSize / 2 * 0.8;
+                bulbSprite = scene.add.circle(pos.x, pos.y, radius, 0xFFFFFF);
                 bulbSprite.setStrokeStyle(2, 0x000000);
                 bulbSprite.setAlpha(0.8);
             }
@@ -809,15 +1027,13 @@
             bulbSprite.setDepth(10);
             
             // Store references for later use
-            gameState.bulb.sprite = scene.add.group([
-                bulbSprite
-            ]);
-            gameState.bulb.bulbSprite = bulbSprite;
+            bulbConfig.sprite = scene.add.group([bulbSprite]);
+            bulbConfig.bulbSprite = bulbSprite;
             
-            // Mark bulb positions in grid (all 9 cells)
-            for (let dx = 0; dx < gameState.bulb.width; dx++) {
-                for (let dy = 0; dy < gameState.bulb.height; dy++) {
-                    setGridPosition(gameState.bulb.x + dx, gameState.bulb.y + dy, 'bulb');
+            // Mark bulb positions in grid
+            for (let dx = 0; dx < bulbConfig.width; dx++) {
+                for (let dy = 0; dy < bulbConfig.height; dy++) {
+                    setGridPosition(bulbConfig.x + dx, bulbConfig.y + dy, bulbId);
                 }
             }
         }
@@ -953,6 +1169,10 @@
                 return (x === 1 && (y === 5 || y === 9)) || 
                        (x === 6 && (y === 5 || y === 9)) || 
                        (x === 12 && (y === 5 || y === 9));
+            } else if (gameState.currentLayout === 'third') {
+                // Third circuit: Vertical wires at (2,5), (2,9), (12,5), (12,9)
+                return (x === 2 && (y === 5 || y === 9)) || 
+                       (x === 12 && (y === 5 || y === 9));
             }
             return false;
         }
@@ -1040,6 +1260,49 @@
                     group.add(verticalWire);
                 } else if (x === 12 && y === 10) {
                     // Bulb bottom L-wire: connects left and up
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                }
+            } else if (gameState.currentLayout === 'third') {
+                // Third circuit L-wire positions
+                if (x === 2 && y === 4) {
+                    // Battery top L-wire: connects right and down
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 2 && y === 10) {
+                    // Battery bottom L-wire: connects right and up
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 4) {
+                    // Right top L-wire: connects left and down
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 10) {
+                    // Right bottom L-wire: connects left and up
                     const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
                     const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
                     horizontalWire.setStrokeStyle(1, 0x8B4513);
@@ -1212,7 +1475,7 @@
         }
 
         function updateLightBulb(isLit) {
-            if (gameState.bulb.bulbSprite) {
+            if (gameState.bulb && gameState.bulb.bulbSprite) {
                 if (isLit) {
                     // Try to use frame 1 for lit state if it's a sprite, otherwise change tint
                     if (gameState.bulb.bulbSprite.setFrame && typeof gameState.bulb.bulbSprite.setFrame === 'function') {
@@ -2253,11 +2516,33 @@
                 console.log('Removed item from placedItems array');
             }
             
-            // Update wire connections when item is removed
-            updateWireConnections();
+            // Reset circuit state immediately when item is removed to clear short circuit indicators
+            gameState.circuitState = 'incomplete';
+            
+            // Turn off bulb(s) immediately to prevent yellow lines from being redrawn
+            if (gameState.bulb) {
+                gameState.bulb.isLit = false;
+                if (gameState.bulb.sprite) {
+                    gameState.bulb.sprite.setTint(0xffffff); // Remove yellow tint
+                }
+            }
+            if (gameState.bulbs) {
+                gameState.bulbs.forEach(bulb => {
+                    bulb.isLit = false;
+                    if (bulb.sprite) {
+                        bulb.sprite.setTint(0xffffff); // Remove yellow tint
+                    }
+                });
+            }
             
             // Stop current flow animation since circuit is now incomplete
             visualizeCurrentFlow(false);
+            
+            // Clear connection graphics to remove yellow success lines
+            clearConnectionGraphics();
+            
+            // Update wire connections after clearing circuit state
+            updateWireConnections();
             
             // Re-evaluate circuit to turn off bulb if circuit is now broken
             evaluateCircuit();
@@ -2632,20 +2917,16 @@
             gameState.gaps.forEach(gap => {
                 if (!gap.filled && gap.sprite) {
                     const graphics = gap.sprite.getChildren()[0]; // Get the graphics object
-                    const pos = gridToWorld(gap.x, gap.y);
                     
                     // Calculate gap size based on the gap's size property
                     const gapSize = gap.size || { width: 1, height: 1 };
                     const cellSize = gameState.cellSize;
                     
-                    // Calculate proper center position for multi-cell gaps (same as markGaps)
-                    const centerX = pos.x + (cellSize * (gapSize.width - 1)) / 2;
-                    const centerY = pos.y + (cellSize * (gapSize.height - 1)) / 2;
-                    
-                    const width = (cellSize * gapSize.width) - 10;
-                    const height = (cellSize * gapSize.height) - 10;
-                    const x = centerX - width / 2;
-                    const y = centerY - height / 2;
+                    // Use same positioning logic as markGaps to maintain consistent size
+                    const x = gap.x * cellSize;
+                    const y = gap.y * cellSize;
+                    const width = cellSize * gapSize.width;
+                    const height = cellSize * gapSize.height;
                     
                     graphics.clear();
                     
@@ -2674,7 +2955,7 @@
                         graphics.lineStyle(2, 0xFF9800, 0.6);
                         graphics.strokeRect(x, y, width, height);
                     } else {
-                        // Show dashed red outline (default state)
+                        // Show dashed red outline (default state) - use same logic as markGaps
                         graphics.lineStyle(2, 0xFF6B6B, 0.8);
                         
                         const dashLength = 5;
@@ -2812,6 +3093,7 @@
         // Circuit evaluation functions
         function evaluateCircuit() {
             console.log('=== EVALUATING CIRCUIT ===');
+            console.log('Current layout:', gameState.currentLayout);
             
             // Check if all gaps are filled before testing
             const unfilledGaps = gameState.gaps.filter(gap => !gap.filled);
@@ -2820,6 +3102,30 @@
                 showFeedback(`Please fill all ${unfilledGaps.length} missing part${unfilledGaps.length > 1 ? 's' : ''} before testing the circuit!`, 'error');
                 updateLightBulb(false);
                 return false;
+            }
+            
+            // First check for short circuit (Stage 2 only)
+            console.log('Checking for short circuit...');
+            const shortCircuitDetected = detectShortCircuit();
+            console.log('Short circuit detection result:', shortCircuitDetected);
+            
+            if (shortCircuitDetected) {
+                console.log('SHORT CIRCUIT DETECTED! Showing warning...');
+                gameState.circuitState = 'short_circuit';
+                updateLightBulb(false); // Keep bulb off
+                
+                // Update wire connections to show the red short circuit path
+                updateWireConnections();
+                
+                // Show red current flow animation
+                visualizeCurrentFlow(true, true); // true for flow, true for short circuit (red)
+                
+                // Show short circuit warning modal after animation
+                setTimeout(() => {
+                    showShortCircuitModal();
+                }, 1500);
+                
+                return false; // Circuit is not working properly
             }
             
             // Debug: Show current state of gaps
@@ -2833,7 +3139,39 @@
             const hasCompletePath = findCircuitPath();
             
             console.log('Circuit evaluation result:', hasCompletePath);
-            updateLightBulb(hasCompletePath);
+            
+            // Additional check for Stage 2: if there's an insulator in the 1-slot gap, 
+            // the circuit cannot be complete even if other paths exist
+            if (gameState.currentLayout === 'second' && hasCompletePath) {
+                const oneSlotGap = gameState.gaps.find(gap => gap.x === 9 && gap.y === 10);
+                if (oneSlotGap) {
+                    const oneSlotItem = getGridPosition(oneSlotGap.x, oneSlotGap.y);
+                    const isInsulator = oneSlotItem && oneSlotItem.conductive === false;
+                    console.log('1-slot gap item:', oneSlotItem, 'is insulator:', isInsulator);
+                    
+                    if (isInsulator) {
+                        console.log('Insulator in 1-slot gap blocks circuit completion');
+                        updateLightBulb(false);
+                        gameState.circuitState = 'incomplete';
+                        return false;
+                    }
+                }
+            }
+            
+            if (hasCompletePath) {
+                gameState.circuitState = 'complete';
+            } else {
+                gameState.circuitState = 'incomplete';
+            }
+            
+            // Update light bulb(s) based on stage
+            if (gameState.currentLayout === 'third') {
+                // Stage 3: Update both bulbs
+                updateDualBulbs(hasCompletePath);
+            } else {
+                // Stage 1 & 2: Update single bulb
+                updateLightBulb(hasCompletePath);
+            }
             
             // Update wire connections to show the complete circuit path
             updateWireConnections();
@@ -2845,11 +3183,22 @@
             console.log('Checking circuit path...');
             console.log('Current layout:', gameState.currentLayout);
             console.log('Battery at:', gameState.battery.x, gameState.battery.y, 'size:', gameState.battery.width + 'x' + gameState.battery.height);
-            console.log('Bulb at:', gameState.bulb.x, gameState.bulb.y, 'size:', gameState.bulb.width + 'x' + gameState.bulb.height);
+            
+            if (gameState.bulb) {
+                console.log('Single bulb at:', gameState.bulb.x, gameState.bulb.y, 'size:', gameState.bulb.width + 'x' + gameState.bulb.height);
+            } else if (gameState.bulbs) {
+                console.log('Dual bulbs:');
+                gameState.bulbs.forEach((bulb, index) => {
+                    console.log(`  Bulb ${index + 1} at:`, bulb.x, bulb.y, 'size:', bulb.width + 'x' + bulb.height);
+                });
+            }
             
             if (gameState.currentLayout === 'second') {
                 // Second circuit layout with T-junctions
                 return findSecondCircuitPath();
+            } else if (gameState.currentLayout === 'third') {
+                // Third circuit layout with series dual bulbs
+                return findThirdCircuitPath();
             } else {
                 // First circuit layout (original)
                 return findFirstCircuitPath();
@@ -3068,6 +3417,41 @@
             return false;
         }
 
+        function updateDualBulbs(isLit) {
+            // Update both bulbs in Stage 3
+            if (gameState.bulbs) {
+                gameState.bulbs.forEach(bulb => {
+                    bulb.isLit = isLit;
+                    if (bulb.bulbSprite) {
+                        // Update sprite frame (0 = off, 1 = on)
+                        bulb.bulbSprite.setFrame(isLit ? 1 : 0);
+                    }
+                });
+            }
+        }
+
+        function findThirdCircuitPath() {
+            // Stage 3: Series circuit with dual bulbs
+            // All gaps must be filled with conductors for the circuit to work
+            console.log('Checking Stage 3 series circuit path...');
+            
+            // Check if all gaps are filled with conductors
+            const allGapsConductors = gameState.gaps.every(gap => {
+                const item = getGridPosition(gap.x, gap.y);
+                return item && item.conductive === true;
+            });
+            
+            if (!allGapsConductors) {
+                console.log('Not all gaps filled with conductors in series circuit');
+                return false;
+            }
+            
+            // In a series circuit, if all gaps are filled with conductors,
+            // the circuit is complete (simplified logic for educational purposes)
+            console.log('Series circuit complete - all gaps filled with conductors');
+            return true;
+        }
+
         // Visual Connection System Functions
         function updateWireConnections() {
             console.log('Updating wire connections...');
@@ -3093,8 +3477,11 @@
                 drawConnectionsForWire(wire);
             });
             
-            // If circuit is complete, draw the continuous path (without animation - handled by visualizeCurrentFlow)
-            if (gameState.bulb.isLit) {
+            // If circuit is complete or short circuit, draw the continuous path (without animation - handled by visualizeCurrentFlow)
+            const isCircuitLit = (gameState.bulb && gameState.bulb.isLit) || 
+                                (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit)) ||
+                                gameState.circuitState === 'short_circuit';
+            if (isCircuitLit) {
                 drawContinuousPathOnly();
             }
             
@@ -3141,7 +3528,9 @@
             graphics.strokePath();
             
             // Add subtle glow effect for active connections
-            if (gameState.bulb.isLit) {
+            const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                         (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+            if (isLit) {
                 const glowGraphics = scene.add.graphics();
                 glowGraphics.lineStyle(lineWidth + 2, color, 0.3);
                 glowGraphics.moveTo(fromPos.x, fromPos.y);
@@ -3180,9 +3569,23 @@
 
         function drawContinuousPathOnly() {
             // Draw the complete electrical path when circuit is active (without animation)
-            if (!gameState.bulb.isLit) return;
+            const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                         (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+            console.log('drawContinuousPathOnly called - isLit:', isLit, 'circuitState:', gameState.circuitState);
+            
+            if (!isLit && gameState.circuitState !== 'short_circuit') {
+                console.log('Skipping path drawing - conditions not met');
+                return;
+            }
             
             console.log('Drawing continuous electrical path for layout:', gameState.currentLayout);
+            
+            // Check if we should draw short circuit path
+            if (gameState.circuitState === 'short_circuit') {
+                console.log('Drawing SHORT CIRCUIT path');
+                drawShortCircuitPathOnly();
+                return;
+            }
             
             // Create a special graphics object for the complete path
             const pathGraphics = scene.add.graphics();
@@ -3193,6 +3596,8 @@
                 drawFirstCircuitPath(pathGraphics);
             } else if (gameState.currentLayout === 'second') {
                 drawSecondCircuitPath(pathGraphics);
+            } else if (gameState.currentLayout === 'third') {
+                drawThirdCircuitPath(pathGraphics);
             }
             
             pathGraphics.strokePath();
@@ -3201,8 +3606,45 @@
             gameState.connectionGraphics.push(pathGraphics);
         }
         
+        function drawShortCircuitPathOnly() {
+            // Draw the short circuit path in red
+            console.log('=== DRAWING SHORT CIRCUIT PATH INDICATOR ===');
+            console.log('Scene available:', !!scene);
+            
+            // Create a special graphics object for the short circuit path
+            const pathGraphics = scene.add.graphics();
+            pathGraphics.lineStyle(6, 0xFF0000, 0.8); // Red color for short circuit path
+            pathGraphics.setDepth(8); // Behind battery and bulb (depth 10) but above wires (depth 5)
+            
+            // Get the short circuit path and draw it
+            const shortCircuitPath = getShortCircuitPath();
+            
+            if (shortCircuitPath.length > 0) {
+                // Start at first position
+                const startPos = gridToWorld(shortCircuitPath[0].x, shortCircuitPath[0].y);
+                pathGraphics.moveTo(startPos.x, startPos.y);
+                
+                // Draw line through each position in the short circuit path
+                for (let i = 1; i < shortCircuitPath.length; i++) {
+                    const pos = gridToWorld(shortCircuitPath[i].x, shortCircuitPath[i].y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+                
+                pathGraphics.strokePath();
+                console.log('Short circuit path drawn with', shortCircuitPath.length, 'points');
+            }
+            
+            // Store for cleanup
+            gameState.connectionGraphics.push(pathGraphics);
+        }
+        
         function drawFirstCircuitPath(pathGraphics) {
-            // First circuit path (original logic)
+            // First circuit path (original logic) - only for stages with single bulb
+            if (!gameState.bulb) {
+                console.log('Skipping drawFirstCircuitPath - no single bulb');
+                return;
+            }
+            
             // Start from battery positive terminal (top cell)
             const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
@@ -3269,7 +3711,12 @@
         }
         
         function drawSecondCircuitPath(pathGraphics) {
-            // Second circuit path with T-junctions
+            // Second circuit path with T-junctions - only for stages with single bulb
+            if (!gameState.bulb) {
+                console.log('Skipping drawSecondCircuitPath - no single bulb');
+                return;
+            }
+            
             // Start from battery positive terminal (top cell)
             const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
@@ -3327,11 +3774,319 @@
             pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
         }
 
+        function drawThirdCircuitPath(pathGraphics) {
+            // Third circuit path for series circuit with dual bulbs
+            if (!gameState.bulbs || gameState.bulbs.length < 2) {
+                console.log('Skipping drawThirdCircuitPath - no dual bulbs');
+                return;
+            }
+            
+            // Start from battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
+            
+            // Connect to L-shaped wire at (2,4)
+            const batteryLWirePos = gridToWorld(2, 4);
+            pathGraphics.lineTo(batteryLWirePos.x, batteryLWirePos.y);
+            
+            // Top horizontal wire from battery toward first bulb
+            for (let x = 3; x <= 6; x++) {
+                if (isConductive(x, 4)) {
+                    const pos = gridToWorld(x, 4);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect to first bulb center (entering from left)
+            const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
+            pathGraphics.lineTo(bulb1CenterPos.x, bulb1CenterPos.y);
+            
+            // Continue from first bulb to right side of top horizontal wire
+            for (let x = 10; x <= 11; x++) {
+                if (isConductive(x, 4)) {
+                    const pos = gridToWorld(x, 4);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect to L-shaped wire at (12,4)
+            const rightTopLWirePos = gridToWorld(12, 4);
+            pathGraphics.lineTo(rightTopLWirePos.x, rightTopLWirePos.y);
+            
+            // Right vertical connection down (complete vertical path)
+            if (isConductive(12, 5)) {
+                const pos = gridToWorld(12, 5);
+                pathGraphics.lineTo(pos.x, pos.y);
+            }
+            
+            // Continue through the 3-cell gap (if filled)
+            for (let y = 6; y <= 8; y++) {
+                if (isConductive(12, y)) {
+                    const pos = gridToWorld(12, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Right vertical connection down to second bulb level
+            if (isConductive(12, 9)) {
+                const pos = gridToWorld(12, 9);
+                pathGraphics.lineTo(pos.x, pos.y);
+            }
+            
+            // Connect to L-shaped wire at (12,10)
+            const rightBottomLWirePos = gridToWorld(12, 10);
+            pathGraphics.lineTo(rightBottomLWirePos.x, rightBottomLWirePos.y);
+            
+            // Bottom horizontal wire from right toward second bulb
+            for (let x = 11; x >= 10; x--) {
+                if (isConductive(x, 10)) {
+                    const pos = gridToWorld(x, 10);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect to second bulb center (entering from right)
+            const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+            pathGraphics.lineTo(bulb2CenterPos.x, bulb2CenterPos.y);
+            
+            // Continue from second bulb to left side of bottom horizontal wire
+            for (let x = 6; x >= 3; x--) {
+                if (isConductive(x, 10)) {
+                    const pos = gridToWorld(x, 10);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect to L-shaped wire at (2,10)
+            const batteryBottomLWirePos = gridToWorld(2, 10);
+            pathGraphics.lineTo(batteryBottomLWirePos.x, batteryBottomLWirePos.y);
+            
+            // Left vertical connection up to battery
+            if (isConductive(2, 9)) {
+                const pos = gridToWorld(2, 9);
+                pathGraphics.lineTo(pos.x, pos.y);
+            }
+            
+            // End at battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
+        }
 
+        // Short Circuit Detection System
+        function detectShortCircuit() {
+            // Only check for short circuits in Stage 2 (second layout)
+            if (gameState.currentLayout !== 'second') {
+                return false;
+            }
+            
+            console.log('Checking for short circuit in Stage 2...');
+            console.log('Current gaps:', gameState.gaps);
+            console.log('Placed items:', gameState.placedItems);
+            
+            // Debug: Print grid state around critical positions
+            console.log('=== GRID DEBUG ===');
+            for (let y = 3; y <= 11; y++) {
+                let row = '';
+                for (let x = 0; x <= 14; x++) {
+                    const item = getGridPosition(x, y);
+                    if (item === null) {
+                        row += '. ';
+                    } else if (item === 'wire') {
+                        row += 'W ';
+                    } else if (item === 'battery') {
+                        row += 'B ';
+                    } else if (item === 'bulb') {
+                        row += 'O ';
+                    } else if (item === 'gap') {
+                        row += 'M ';
+                    } else if (item && item.conductive) {
+                        row += 'C ';
+                    } else if (item && !item.conductive) {
+                        row += 'I ';
+                    } else {
+                        row += '? ';
+                    }
+                }
+                console.log(`Row ${y}: ${row}`);
+            }
+            console.log('=== END GRID DEBUG ===');
+            
+            // Check if conductors are placed in BOTH the 2-slot AND 3-slot missing part indicators
+            
+            // 2-slot gap: positions (3,4) and (4,4) - horizontal gap
+            const twoSlotPositions = [
+                { x: 3, y: 4 },
+                { x: 4, y: 4 }
+            ];
+            
+            const hasConductorIn2Slot = twoSlotPositions.every(pos => {
+                const item = getGridPosition(pos.x, pos.y);
+                const isConductive = item && (item.conductive || item === 'wire');
+                console.log(`2-slot position (${pos.x},${pos.y}): item=`, item, `type=${typeof item}, conductive=${isConductive}`);
+                if (item && typeof item === 'object') {
+                    console.log(`  Item properties:`, Object.keys(item));
+                    console.log(`  Item.conductive:`, item.conductive);
+                    console.log(`  Item.type:`, item.type);
+                }
+                return isConductive;
+            });
+            
+            // 3-slot gap: positions (6,6), (6,7), (6,8) - vertical gap
+            const threeSlotPositions = [
+                { x: 6, y: 6 },
+                { x: 6, y: 7 },
+                { x: 6, y: 8 }
+            ];
+            
+            const hasConductorIn3Slot = threeSlotPositions.every(pos => {
+                const item = getGridPosition(pos.x, pos.y);
+                const isConductive = item && (item.conductive || item === 'wire');
+                console.log(`3-slot position (${pos.x},${pos.y}): item=`, item, `type=${typeof item}, conductive=${isConductive}`);
+                if (item && typeof item === 'object') {
+                    console.log(`  Item properties:`, Object.keys(item));
+                    console.log(`  Item.conductive:`, item.conductive);
+                    console.log(`  Item.type:`, item.type);
+                }
+                return isConductive;
+            });
+            
+            console.log('Has conductor in 2-slot gap (3,4)-(4,4):', hasConductorIn2Slot);
+            console.log('Has conductor in 3-slot gap (6,6)-(6,8):', hasConductorIn3Slot);
+            
+            // Short circuit occurs when BOTH 2-slot and 3-slot gaps have conductors
+            // The 1-slot gap does not affect short circuit detection
+            if (hasConductorIn2Slot && hasConductorIn3Slot) {
+                console.log('SHORT CIRCUIT DETECTED: Both 2-slot and 3-slot gaps have conductors');
+                console.log('Current can flow from battery + through T-junction bypass path to battery -');
+                return true;
+            }
+            
+            console.log('Short circuit conditions not met - need conductors in BOTH 2-slot and 3-slot gaps');
+            return false;
+        }
+        
+        function getShortCircuitPath() {
+            // Return the specific short circuit path for Stage 2
+            // Battery + → (6,4) T-junction → (6,6)-(6,8) 3-slot conductor → (6,10) T-junction → Battery -
+            console.log('getShortCircuitPath called');
+            const path = [
+                { x: 1, y: 7 },   // Battery center (visual starting point)
+                { x: 1, y: 4 },   // Battery + connection
+                { x: 2, y: 4 },   // Wire to 2-slot gap
+                { x: 3, y: 4 },   // 2-slot conductor part 1
+                { x: 4, y: 4 },   // 2-slot conductor part 2
+                { x: 5, y: 4 },   // Wire to T-junction
+                { x: 6, y: 4 },   // T-junction top
+                { x: 6, y: 5 },   // Vertical wire down
+                { x: 6, y: 6 },   // 3-slot conductor part 1
+                { x: 6, y: 7 },   // 3-slot conductor part 2
+                { x: 6, y: 8 },   // 3-slot conductor part 3
+                { x: 6, y: 9 },   // Vertical wire down
+                { x: 6, y: 10 },  // T-junction bottom
+                { x: 5, y: 10 },  // Wire from T-junction
+                { x: 4, y: 10 },  // Wire
+                { x: 3, y: 10 },  // Wire
+                { x: 2, y: 10 },  // Wire
+                { x: 1, y: 10 },  // Battery - connection
+                { x: 1, y: 7 }    // Battery center (visual ending point)
+            ];
+            console.log('Short circuit path generated with', path.length, 'points');
+            return path;
+        }
+        
+        function reconstructPath(parent, start, end) {
+            const path = [];
+            let current = end;
+            
+            while (current) {
+                path.unshift(current);
+                const key = `${current.x},${current.y}`;
+                current = parent.get(key);
+                
+                // Stop when we reach the start
+                if (current && current.x === start.x && current.y === start.y) {
+                    path.unshift(start);
+                    break;
+                }
+            }
+            
+            return path;
+        }
+        
+        function isBulbPosition(x, y) {
+            // Check if position is within any bulb area
+            if (gameState.bulb) {
+                // Single bulb (Stage 1 & 2)
+                return x >= gameState.bulb.x && x < gameState.bulb.x + gameState.bulb.width &&
+                       y >= gameState.bulb.y && y < gameState.bulb.y + gameState.bulb.height;
+            } else if (gameState.bulbs) {
+                // Multiple bulbs (Stage 3)
+                return gameState.bulbs.some(bulb => 
+                    x >= bulb.x && x < bulb.x + bulb.width &&
+                    y >= bulb.y && y < bulb.y + bulb.height
+                );
+            }
+            return false;
+        }
+        
+        function showShortCircuitModal() {
+            // Create short circuit warning modal
+            const modal = document.getElementById('success-modal');
+            const content = document.getElementById('success-content');
+            
+            content.innerHTML = `
+                <h2 style="color: #F44336;">⚠️ Short Circuit Detected!</h2>
+                <div id="short-circuit-details">
+                    <p><strong>Oops! You've created a short circuit.</strong> The electricity is taking a shortcut from the battery's + terminal directly to the - terminal, bypassing the light bulb completely!</p>
+                    
+                    <div style="background-color: #FFEBEE; padding: 15px; border-radius: 8px; border-left: 4px solid #F44336; margin: 15px 0;">
+                        <h4 style="color: #C62828; margin-bottom: 10px;">What is a Short Circuit?</h4>
+                        <p style="color: #333; margin-bottom: 8px;">A short circuit happens when electricity finds an easier path than the one we want it to take. Instead of flowing through the light bulb, it's going directly from the battery's + side to the - side.</p>
+                    </div>
+                    
+                    <div style="background-color: #FFF3E0; padding: 15px; border-radius: 8px; border-left: 4px solid #FF9800; margin: 15px 0;">
+                        <h4 style="color: #E65100; margin-bottom: 10px;">Why is this a problem?</h4>
+                        <ul style="color: #333; margin: 0; padding-left: 20px;">
+                            <li style="margin-bottom: 8px;">The light bulb won't work because electricity isn't flowing through it</li>
+                            <li style="margin-bottom: 8px;">Too much electricity flows too fast, which can be dangerous</li>
+                            <li style="margin-bottom: 8px;">In real life, this could damage equipment or cause fires</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background-color: #E8F5E8; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50; margin: 15px 0;">
+                        <h4 style="color: #2E7D32; margin-bottom: 10px;">How to fix it:</h4>
+                        <ul style="color: #333; margin: 0; padding-left: 20px;">
+                            <li style="margin-bottom: 8px;">Make sure electricity has to flow through the light bulb</li>
+                            <li style="margin-bottom: 8px;">Use insulators to block unwanted paths</li>
+                            <li style="margin-bottom: 8px;">Check that your circuit follows the intended path</li>
+                        </ul>
+                    </div>
+                </div>
+                <div id="short-circuit-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;">
+                    <button id="try-again-btn" style="flex: 1; max-width: 150px;">🔄 Try Again</button>
+                    <button id="reset-circuit-btn" style="flex: 1; max-width: 150px; background-color: #F44336;">🔄 Reset Circuit</button>
+                </div>
+            `;
+            
+            // Show modal
+            modal.style.display = 'block';
+            
+            // Add event listeners for buttons
+            document.getElementById('try-again-btn').addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            document.getElementById('reset-circuit-btn').addEventListener('click', function() {
+                modal.style.display = 'none';
+                resetCurrentStage();
+            });
+        }
 
-        function visualizeCurrentFlow(hasFlow) {
-            console.log('visualizeCurrentFlow called with hasFlow:', hasFlow);
-            console.log('gameState.bulb.isLit:', gameState.bulb.isLit);
+        function visualizeCurrentFlow(hasFlow, isShortCircuit = false) {
+            console.log('visualizeCurrentFlow called with hasFlow:', hasFlow, 'isShortCircuit:', isShortCircuit);
+            const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                         (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+            console.log('isLit:', isLit);
             console.log('scene available:', !!scene);
             
             // Remove existing flow visualization
@@ -3352,8 +4107,9 @@
                 return;
             }
             
-            if (!gameState.bulb.isLit) {
-                console.log('Bulb is not lit, not starting animation');
+            // For short circuits, show animation even if bulb is not lit
+            if (!isLit && !isShortCircuit) {
+                console.log('Bulb is not lit and not short circuit, not starting animation');
                 return;
             }
             
@@ -3387,13 +4143,14 @@
                 
                 console.log(`Creating particle ${i} at path index ${startIndex}, position:`, startPosition);
                 
-                // Create yellow particle
-                const particle = scene.add.circle(startPosition.x, startPosition.y, 6, 0xFFFF00);
+                // Create particle with appropriate color (yellow for normal, red for short circuit)
+                const particleColor = isShortCircuit ? 0xFF0000 : 0xFFFF00;
+                const particle = scene.add.circle(startPosition.x, startPosition.y, 6, particleColor);
                 particle.setAlpha(1.0);
                 particle.setDepth(8); // Behind battery and bulb (depth 10) but above wires (depth 5)
                 
-                // Create yellow glow effect
-                const glow = scene.add.circle(startPosition.x, startPosition.y, 12, 0xFFFF00);
+                // Create glow effect with matching color
+                const glow = scene.add.circle(startPosition.x, startPosition.y, 12, particleColor);
                 glow.setAlpha(0.4);
                 glow.setDepth(7); // Behind particle
                 
@@ -3417,14 +4174,46 @@
         function buildCompleteCircuitPath() {
             console.log('Building circuit path for layout:', gameState.currentLayout);
             
+            // Check if we should use short circuit path (Stage 2 only)
+            if (gameState.currentLayout === 'second' && gameState.circuitState === 'short_circuit') {
+                console.log('Using short circuit path for visualization');
+                return buildShortCircuitPath();
+            }
+            
             if (gameState.currentLayout === 'second') {
                 return buildSecondCircuitPath();
+            } else if (gameState.currentLayout === 'third') {
+                return buildThirdCircuitPath();
             } else {
                 return buildFirstCircuitPath();
             }
         }
+        
+        function buildShortCircuitPath() {
+            console.log('Building short circuit path...');
+            const path = [];
+            const shortCircuitPositions = getShortCircuitPath();
+            
+            // Convert grid positions to world positions for visualization
+            shortCircuitPositions.forEach(pos => {
+                const worldPos = gridToWorld(pos.x, pos.y);
+                path.push({ 
+                    x: worldPos.x, 
+                    y: worldPos.y, 
+                    isShortCircuit: true 
+                });
+            });
+            
+            console.log('Short circuit path built with', path.length, 'points');
+            return path;
+        }
 
         function buildFirstCircuitPath() {
+            if (!gameState.bulb) {
+                console.log('Skipping buildFirstCircuitPath - no single bulb');
+                return [];
+            }
+            
             const path = [];
             const batteryPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
@@ -3445,22 +4234,14 @@
             const batteryLWirePos = gridToWorld(2, 4);
             path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
             
-            // Connection horizontally to top wire at (3,4)
-            const batteryTopWirePos = gridToWorld(3, 4);
-            path.push({ x: batteryTopWirePos.x, y: batteryTopWirePos.y, isWire: true });
-            
-            // Top wire (positive path) from battery to bulb
-            for (let x = 3; x <= 11; x++) {
+            // Top wire (positive path) from battery to bulb (including L-shaped wire positions)
+            for (let x = 3; x <= 12; x++) {
                 if (isConductive(x, 4)) { // Row 4 is top wire
                     const pos = gridToWorld(x, 4);
                     path.push({ x: pos.x, y: pos.y, isWire: true });
                     console.log(`Added top wire position: (${pos.x}, ${pos.y})`);
                 }
             }
-            
-            // Connection horizontally from top wire to bulb L-shaped wire at (12,4)
-            const bulbTopLWirePos = gridToWorld(12, 4);
-            path.push({ x: bulbTopLWirePos.x, y: bulbTopLWirePos.y, isWire: true });
             
             // Connection vertically to vertical wire at (12,5)
             const bulbTopVWirePos = gridToWorld(12, 5);
@@ -3474,26 +4255,14 @@
             const bulbBottomVWirePos = gridToWorld(12, 9);
             path.push({ x: bulbBottomVWirePos.x, y: bulbBottomVWirePos.y, isWire: true });
             
-            // Connection vertically to bulb L-shaped wire at (12,10)
-            const bulbBottomLWirePos = gridToWorld(12, 10);
-            path.push({ x: bulbBottomLWirePos.x, y: bulbBottomLWirePos.y, isWire: true });
-            
-            // Connection horizontally to bottom wire at (11,10)
-            const bulbBottomWirePos = gridToWorld(11, 10);
-            path.push({ x: bulbBottomWirePos.x, y: bulbBottomWirePos.y, isWire: true });
-            
-            // Bottom wire (negative path) from bulb back to battery
-            for (let x = 11; x >= 3; x--) {
+            // Bottom wire (negative path) from bulb back to battery (including L-shaped wire positions)
+            for (let x = 12; x >= 2; x--) {
                 if (isConductive(x, 10)) { // Row 10 is bottom wire
                     const pos = gridToWorld(x, 10);
                     path.push({ x: pos.x, y: pos.y, isWire: true });
                     console.log(`Added bottom wire position: (${pos.x}, ${pos.y})`);
                 }
             }
-            
-            // Connection horizontally from bottom wire to battery L-shaped wire at (2,10)
-            const batteryBottomLWirePos = gridToWorld(2, 10);
-            path.push({ x: batteryBottomLWirePos.x, y: batteryBottomLWirePos.y, isWire: true });
             
             // Connection vertically to vertical wire at (2,9)
             const batteryBottomVWirePos = gridToWorld(2, 9);
@@ -3508,6 +4277,11 @@
         }
 
         function buildSecondCircuitPath() {
+            if (!gameState.bulb) {
+                console.log('Skipping buildSecondCircuitPath - no single bulb');
+                return [];
+            }
+            
             const path = [];
             
             console.log('Building second circuit path...');
@@ -3524,11 +4298,7 @@
             const batteryLWirePos = gridToWorld(1, 4);
             path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
             
-            // Connection horizontally to top wire at (2,4)
-            const batteryTopWirePos = gridToWorld(2, 4);
-            path.push({ x: batteryTopWirePos.x, y: batteryTopWirePos.y, isWire: true });
-            
-            // Top wire (positive path) from battery to T-junction
+            // Top wire (positive path) from battery to T-junction (starting from x=2)
             for (let x = 2; x <= 6; x++) {
                 if (isConductive(x, 4)) { // Row 4 is top wire
                     const pos = gridToWorld(x, 4);
@@ -3537,8 +4307,8 @@
                 }
             }
             
-            // At T-junction (6,4), continue horizontally to bulb
-            for (let x = 6; x <= 12; x++) {
+            // Continue horizontally from T-junction to bulb (starting from x=7 to avoid duplicate)
+            for (let x = 7; x <= 12; x++) {
                 if (isConductive(x, 4)) { // Continue on row 4
                     const pos = gridToWorld(x, 4);
                     path.push({ x: pos.x, y: pos.y, isWire: true });
@@ -3558,11 +4328,7 @@
             const bulbBottomVWirePos = gridToWorld(12, 9);
             path.push({ x: bulbBottomVWirePos.x, y: bulbBottomVWirePos.y, isWire: true });
             
-            // Connection vertically to bulb L-shaped wire at (12,10)
-            const bulbBottomLWirePos = gridToWorld(12, 10);
-            path.push({ x: bulbBottomLWirePos.x, y: bulbBottomLWirePos.y, isWire: true });
-            
-            // Bottom wire (negative path) from bulb back to T-junction
+            // Bottom wire (negative path) from bulb back to T-junction (starting from x=12)
             for (let x = 12; x >= 6; x--) {
                 if (isConductive(x, 10)) { // Row 10 is bottom wire
                     const pos = gridToWorld(x, 10);
@@ -3589,6 +4355,110 @@
             path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
             
             console.log(`Second circuit path built with ${path.length} points`);
+            return path;
+        }
+
+        function buildThirdCircuitPath() {
+            if (!gameState.bulbs || gameState.bulbs.length < 2) {
+                console.log('Skipping buildThirdCircuitPath - no dual bulbs');
+                return [];
+            }
+            
+            const path = [];
+            
+            console.log('Building third circuit path (series circuit)...');
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Connection to L-shaped wire at (2,4)
+            const batteryLWirePos = gridToWorld(2, 4);
+            path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
+            
+            // Top horizontal wire from battery toward first bulb
+            for (let x = 3; x <= 6; x++) {
+                if (isConductive(x, 4)) {
+                    const pos = gridToWorld(x, 4);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                }
+            }
+            
+            // Connection to first bulb center (entering from left)
+            const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
+            path.push({ x: bulb1CenterPos.x, y: bulb1CenterPos.y, isBulb: true });
+            
+            // Continue from first bulb to right side of top horizontal wire
+            for (let x = 10; x <= 11; x++) {
+                if (isConductive(x, 4)) {
+                    const pos = gridToWorld(x, 4);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                }
+            }
+            
+            // Connection to L-shaped wire at (12,4)
+            const rightTopLWirePos = gridToWorld(12, 4);
+            path.push({ x: rightTopLWirePos.x, y: rightTopLWirePos.y, isWire: true });
+            
+            // Right vertical connection down (complete vertical path)
+            if (isConductive(12, 5)) {
+                const pos = gridToWorld(12, 5);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            }
+            
+            // Continue through the 3-cell gap (if filled)
+            for (let y = 6; y <= 8; y++) {
+                if (isConductive(12, y)) {
+                    const pos = gridToWorld(12, y);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                }
+            }
+            
+            // Right vertical connection down to second bulb level
+            if (isConductive(12, 9)) {
+                const pos = gridToWorld(12, 9);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            }
+            
+            // Connection to L-shaped wire at (12,10)
+            const rightBottomLWirePos = gridToWorld(12, 10);
+            path.push({ x: rightBottomLWirePos.x, y: rightBottomLWirePos.y, isWire: true });
+            
+            // Bottom horizontal wire from right toward second bulb
+            for (let x = 11; x >= 10; x--) {
+                if (isConductive(x, 10)) {
+                    const pos = gridToWorld(x, 10);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                }
+            }
+            
+            // Connection to second bulb center (entering from right)
+            const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+            path.push({ x: bulb2CenterPos.x, y: bulb2CenterPos.y, isBulb: true });
+            
+            // Continue from second bulb to left side of bottom horizontal wire
+            for (let x = 6; x >= 3; x--) {
+                if (isConductive(x, 10)) {
+                    const pos = gridToWorld(x, 10);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                }
+            }
+            
+            // Connection to L-shaped wire at (2,10)
+            const batteryBottomLWirePos = gridToWorld(2, 10);
+            path.push({ x: batteryBottomLWirePos.x, y: batteryBottomLWirePos.y, isWire: true });
+            
+            // Left vertical connection up to battery
+            if (isConductive(2, 9)) {
+                const pos = gridToWorld(2, 9);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            }
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            console.log(`Third circuit path built with ${path.length} points`);
             return path;
         }
 
@@ -3667,12 +4537,25 @@
             // Start movement animation after a brief delay to see pulsing first
             setTimeout(() => {
                 console.log('Starting movement animation...');
+                console.log('Circuit path for movement:', circuitPath.length, 'points');
+                const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                             (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+                console.log('isLit:', isLit);
+                console.log('gameState.circuitState:', gameState.circuitState);
                 animateLinearMovement(particles, circuitPath);
             }, 1000);
         }
 
         function animateLinearMovement(particles, circuitPath) {
-            if (!gameState.bulb.isLit) return;
+            // Allow animation for both normal circuits (bulb lit) and short circuits
+            const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                         (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+            console.log('animateLinearMovement called - isLit:', isLit, 'circuitState:', gameState.circuitState);
+            
+            if (!isLit && gameState.circuitState !== 'short_circuit') {
+                console.log('Skipping linear movement - conditions not met');
+                return;
+            }
             
             console.log('Starting circuit flow animation');
             console.log('Circuit path length:', circuitPath.length);
@@ -3686,8 +4569,13 @@
         }
 
         function animateParticleAroundCircuit(particle, glow, circuitPath, particleIndex) {
-            if (!gameState.bulb.isLit || !particle.active || circuitPath.length === 0) {
-                console.log('Cannot animate - conditions not met');
+            console.log(`animateParticleAroundCircuit called for particle ${particleIndex}`);
+            const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                         (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+            console.log('Conditions - isLit:', isLit, 'circuitState:', gameState.circuitState, 'particle.active:', particle.active, 'pathLength:', circuitPath.length);
+            
+            if ((!isLit && gameState.circuitState !== 'short_circuit') || !particle.active || circuitPath.length === 0) {
+                console.log('Cannot animate particle', particleIndex, '- conditions not met');
                 return;
             }
             
@@ -3714,7 +4602,10 @@
             const animationSpeed = 300; // milliseconds per path segment
             
             const moveToNextPoint = () => {
-                if (!gameState.bulb.isLit || !particle.active) {
+                // Allow animation for both normal circuits (bulb lit) and short circuits
+                const isLit = (gameState.bulb && gameState.bulb.isLit) || 
+                             (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit));
+                if ((!isLit && gameState.circuitState !== 'short_circuit') || !particle.active) {
                     console.log('Stopping animation - circuit incomplete');
                     return;
                 }
@@ -3733,10 +4624,8 @@
                     duration: animationSpeed,
                     ease: 'Linear',
                     onComplete: () => {
-                        // Continue to next point after a small delay
-                        setTimeout(() => {
-                            moveToNextPoint();
-                        }, 50); // Small delay between segments
+                        // Continue to next point immediately for smooth flow
+                        moveToNextPoint();
                     }
                 });
             };
@@ -3837,6 +4726,7 @@
                 const isComplete = evaluateCircuit();
                 
                 if (isComplete) {
+                    console.log('Circuit is complete - showing success flow and modal');
                     showFeedback('🎉 Circuit Complete! Electricity is flowing!', 'success');
                     
                     // Show current flow animation
@@ -3844,22 +4734,30 @@
                     
                     // Show success modal after animation
                     setTimeout(() => {
+                        console.log('Showing success modal');
                         showSuccessModal();
                     }, 1500);
                 } else {
-                    // Stop any current flow animation
-                    visualizeCurrentFlow(false);
-                    
-                    // Provide specific feedback about why circuit failed
-                    let message = '';
-                    if (analysis.gapsFilled === 0) {
-                        message = '❌ No materials placed. Drag materials to the gaps!';
-                    } else if (analysis.gapsFilled < analysis.totalGaps) {
-                        message = `❌ Try filling more gaps to complete the circuit.`;
+                    // Check if it's a short circuit (handled by evaluateCircuit)
+                    if (gameState.circuitState === 'short_circuit') {
+                        console.log('Short circuit detected - showing error feedback');
+                        showFeedback('⚠️ Short Circuit Detected! Check the warning for details.', 'error');
+                        // Current flow animation is already handled in evaluateCircuit
                     } else {
-                        message = '❌ Some materials are blocking electricity. Try different materials.';
+                        // Stop any current flow animation
+                        visualizeCurrentFlow(false);
+                        
+                        // Provide specific feedback about why circuit failed
+                        let message = '';
+                        if (analysis.gapsFilled === 0) {
+                            message = '❌ No materials placed. Drag materials to the gaps!';
+                        } else if (analysis.gapsFilled < analysis.totalGaps) {
+                            message = `❌ Try filling more gaps to complete the circuit.`;
+                        } else {
+                            message = '❌ Some materials are blocking electricity. Try different materials.';
+                        }
+                        showFeedback(message, 'error');
                     }
-                    showFeedback(message, 'error');
                 }
                 
                 // Re-enable button
@@ -3872,7 +4770,173 @@
             console.log('Reset button clicked - functionality will be added later');
         });
 
+        // Stage selector menu functionality
+        const stageMenuBtn = document.getElementById('stage-menu-btn');
+        const stageSelector = document.getElementById('stage-selector');
+        const stageOptions = document.querySelectorAll('.stage-option');
+        
+        // Toggle stage selector menu
+        stageMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isVisible = stageSelector.style.display === 'block';
+            stageSelector.style.display = isVisible ? 'none' : 'block';
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!stageSelector.contains(e.target) && e.target !== stageMenuBtn) {
+                stageSelector.style.display = 'none';
+            }
+        });
+        
+        // Handle stage selection
+        stageOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const selectedStage = this.dataset.stage;
+                
+                // Update active state
+                stageOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Load the selected stage
+                loadCircuitLayout(selectedStage);
+                
+                // Close the menu
+                stageSelector.style.display = 'none';
+                
+                console.log('Switched to stage:', selectedStage);
+            });
+        });
+        
+        // Function to update stage selector UI when stage changes programmatically
+        function updateStageSelector(stageName) {
+            const stageOptions = document.querySelectorAll('.stage-option');
+            stageOptions.forEach(option => {
+                if (option.dataset.stage === stageName) {
+                    option.classList.add('active');
+                } else {
+                    option.classList.remove('active');
+                }
+            });
+        }
+        
+        function updateStageTitle(stageName) {
+            const stageTitle = document.getElementById('stage-title');
+            if (stageTitle) {
+                switch(stageName) {
+                    case 'first':
+                        stageTitle.textContent = 'Stage 1: Basic Circuit';
+                        break;
+                    case 'second':
+                        stageTitle.textContent = 'Stage 2: Short Circuit';
+                        break;
+                    case 'third':
+                        stageTitle.textContent = 'Stage 3: Series Circuit';
+                        break;
+                    default:
+                        stageTitle.textContent = 'Circuit Game';
+                }
+            }
+        }
+
+        function updateSuccessActions() {
+            const successActions = document.getElementById('success-actions');
+            
+            // Clear existing buttons
+            successActions.innerHTML = '';
+            
+            // Always add Try Again button
+            const tryAgainBtn = document.createElement('button');
+            tryAgainBtn.id = 'play-again-btn';
+            tryAgainBtn.innerHTML = '🔄 Try Again';
+            tryAgainBtn.addEventListener('click', function() {
+                hideSuccessModal();
+                resetCurrentStage();
+            });
+            successActions.appendChild(tryAgainBtn);
+            
+            // Add stage-specific buttons
+            if (gameState.currentLayout === 'first') {
+                // Stage 1: Add "Next Stage" button to go to Stage 2
+                const nextStageBtn = document.createElement('button');
+                nextStageBtn.id = 'next-stage-btn';
+                nextStageBtn.innerHTML = '➡️ Next Stage';
+                nextStageBtn.addEventListener('click', function() {
+                    hideSuccessModal();
+                    loadCircuitLayout('second');
+                });
+                successActions.appendChild(nextStageBtn);
+            } else if (gameState.currentLayout === 'second') {
+                // Stage 2: Add "Next Stage" button to go to Stage 3
+                const nextStageBtn = document.createElement('button');
+                nextStageBtn.id = 'next-stage-btn';
+                nextStageBtn.innerHTML = '➡️ Next Stage';
+                nextStageBtn.addEventListener('click', function() {
+                    hideSuccessModal();
+                    loadCircuitLayout('third');
+                });
+                successActions.appendChild(nextStageBtn);
+            } else if (gameState.currentLayout === 'third') {
+                // Stage 3: Add educational completion message
+                const completionBtn = document.createElement('button');
+                completionBtn.id = 'completion-btn';
+                completionBtn.innerHTML = '🎓 Well Done!';
+                completionBtn.addEventListener('click', function() {
+                    hideSuccessModal();
+                    resetCurrentStage();
+                });
+                successActions.appendChild(completionBtn);
+            }
+            
+            // Always add New Challenge button (cycles through stages)
+            const newChallengeBtn = document.createElement('button');
+            newChallengeBtn.id = 'new-challenge-btn';
+            newChallengeBtn.innerHTML = '⚡ New Challenge';
+            newChallengeBtn.addEventListener('click', function() {
+                hideSuccessModal();
+                createNewChallenge();
+            });
+            successActions.appendChild(newChallengeBtn);
+        }
+
         function showSuccessModal() {
+            console.log('=== SHOWING SUCCESS MODAL ===');
+            
+            // Get the modal elements
+            const modal = document.getElementById('success-modal');
+            const content = document.getElementById('success-content');
+            
+            // Determine the stage title
+            let stageTitle = '🎉 Excellent Work!';
+            if (gameState.currentLayout === 'first') {
+                stageTitle = '🎉 Excellent Work! - Stage 1 Complete';
+            } else if (gameState.currentLayout === 'second') {
+                stageTitle = '🎉 Excellent Work! - Stage 2 Complete';
+            } else if (gameState.currentLayout === 'third') {
+                stageTitle = '🎉 Excellent Work! - Stage 3 Complete';
+            }
+            
+            // Recreate the success modal content structure to ensure it exists
+            content.innerHTML = `
+                <h2>${stageTitle}</h2>
+                <div id="success-details">
+                    <p><strong>You completed the electrical circuit!</strong></p>
+                    <p>The light bulb is glowing because:</p>
+                    <ul id="success-explanation">
+                        <li>✅ Electricity flows from the battery's positive (+) terminal</li>
+                        <li>✅ Through the <span class="conductor-text">conductors</span> you placed</li>
+                        <li>✅ Through the light bulb (making it glow)</li>
+                        <li>✅ Back to the battery's negative (-) terminal</li>
+                    </ul>
+                    <div id="materials-used">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div id="success-actions">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            `;
+            
             // Get analysis of what materials were used
             const analysis = getCircuitAnalysis();
             
@@ -3894,23 +4958,82 @@
                 materialsHTML += '</ul>';
                 
                 if (analysis.conductorsPlaced > 0) {
-                    materialsHTML += `<p><strong>🎯 Perfect!</strong> You used <span class="conductor-text">${analysis.conductorsPlaced} conductor(s)</span> to complete the electrical circuit!</p>`;
+                    if (gameState.currentLayout === 'second') {
+                        // For Stage 2, show both conductors and insulators
+                        const insulatorsPlaced = analysis.placedItems.filter(item => !item.conductive).length;
+                        materialsHTML += `<p><strong>🎯 Perfect!</strong> You used <span class="conductor-text">${analysis.conductorsPlaced} conductor(s)</span>`;
+                        if (insulatorsPlaced > 0) {
+                            materialsHTML += ` and <span class="insulator-text">${insulatorsPlaced} insulator(s)</span>`;
+                        }
+                        materialsHTML += ` to complete the electrical circuit!</p>`;
+                    } else {
+                        // For Stage 1, keep original format
+                        materialsHTML += `<p><strong>🎯 Perfect!</strong> You used <span class="conductor-text">${analysis.conductorsPlaced} conductor(s)</span> to complete the electrical circuit!</p>`;
+                    }
                 }
                 
-                // Add educational explanation
-                materialsHTML += `<p><strong>💡 What you learned:</strong> Conductors like metals allow electricity to flow, while insulators like rubber and wood block it. That's why the light bulb glows when you use conductive materials!</p>`;
+                // Add educational explanation (only for Stage 1, Stage 2 has its own section)
+                if (gameState.currentLayout !== 'second') {
+                    materialsHTML += `<p><strong>💡 What you learned:</strong> Conductors like metals allow electricity to flow, while insulators like rubber and wood block it. That's why the light bulb glows when you use conductive materials!</p>`;
+                }
             } else {
                 materialsHTML += '<p>No materials were needed - the circuit was already complete!</p>';
             }
             
+            // Add stage-specific educational content
+            if (gameState.currentLayout === 'second') {
+                // Stage 2 educational content about short circuits and parallel circuits
+                materialsHTML += `
+                    <div style="margin-top: 20px; padding: 15px; background-color: #E8F5E8; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                        <h4 style="color: #2E7D32; margin-bottom: 12px;">🎓 What You Learned:</h4>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>Parallel Circuits:</strong> In this stage, you built a parallel circuit where electricity can flow through multiple paths. Even if one path is blocked, electricity can still flow through other paths!</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>Short Circuits:</strong> A short circuit happens when electricity takes an unintended shortcut path instead of going where we want it to go.</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>Why are they dangerous?</strong> Short circuits can be dangerous because they allow too much electricity to flow too quickly. In real life, this can damage equipment or even cause fires!</p>
+                        
+                        <p style="margin-bottom: 0; color: #333; line-height: 1.4;"><strong>Safety Tips:</strong></p>
+                        <ul style="margin: 5px 0 0 20px; color: #333; line-height: 1.4;">
+                            <li>Inspect wires for any damages/uninsulated areas.</li>
+                            <li>Make use of electrical protective devices such as fuses and circuit breakers which immediately cut off electricity when short circuits happen.</li>
+                        </ul>
+                    </div>
+                `;
+            } else if (gameState.currentLayout === 'third') {
+                // Stage 3 educational content about series circuits
+                materialsHTML += `
+                    <div style="margin-top: 20px; padding: 15px; background-color: #E8F5E8; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                        <h4 style="color: #2E7D32; margin-bottom: 12px;">🎓 What You Learned About Series Circuits:</h4>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🔗 What is a Series Circuit?</strong> A series circuit connects components one after another in a single chain. Think of it like a chain where if one link breaks, the whole chain fails!</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>⚡ How it Works:</strong> Electricity must flow through ALL components in order. If any part is missing or broken, the entire circuit stops working and both light bulbs turn off.</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🎄 Real-World Examples:</strong></p>
+                        <ul style="margin: 5px 0 10px 20px; color: #333; line-height: 1.4;">
+                            <li>Old Christmas lights (when one bulb burns out, they all go dark!)</li>
+                            <li>Flashlights (battery → switch → bulb in a single path)</li>
+                            <li>Some car headlights</li>
+                        </ul>
+                        
+
+                        
+                        <p style="margin-bottom: 0; color: #333; line-height: 1.4;"><strong>🔧 Key Lesson:</strong> All parts must work together for the circuit to function - just like teamwork!</p>
+                    </div>
+                `;
+            }
+            
             materialsDiv.innerHTML = materialsHTML;
+            
+            // Update success actions based on current stage
+            updateSuccessActions();
             
             // Add celebration visual effects
             addCelebrationEffects();
             
             // Show modal with animation
-            const modal = document.getElementById('success-modal');
-            const modalContent = document.getElementById('success-content');
+            const modalContent = content; // Reuse the content element we already have
             
             // Ensure modal content starts invisible and centered
             modalContent.style.opacity = '0';
@@ -3933,34 +5056,48 @@
         }
 
         function addCelebrationEffects() {
-            // Create sparkle particles around the light bulb
-            if (gameState.bulb.sprite && gameState.bulb.isLit) {
-                const bulbPos = gridToWorld(gameState.bulb.x, gameState.bulb.y);
-                
-                // Create multiple sparkle particles
-                for (let i = 0; i < 12; i++) {
-                    setTimeout(() => {
-                        const angle = (i / 12) * Math.PI * 2;
-                        const distance = 40 + Math.random() * 20;
-                        const sparkleX = bulbPos.x + Math.cos(angle) * distance;
-                        const sparkleY = bulbPos.y + Math.sin(angle) * distance;
-                        
-                        const sparkle = scene.add.star(sparkleX, sparkleY, 5, 4, 8, 0xFFD700);
-                        sparkle.setAlpha(1);
-                        
-                        // Animate sparkle
-                        scene.tweens.add({
-                            targets: sparkle,
-                            scaleX: 0,
-                            scaleY: 0,
-                            alpha: 0,
-                            rotation: Math.PI * 2,
-                            duration: 1000,
-                            ease: 'Power2',
-                            onComplete: () => sparkle.destroy()
-                        });
-                    }, i * 100);
+            // Create sparkle particles around the light bulb(s)
+            const createSparklesForBulb = (bulbConfig, delay = 0) => {
+                if (bulbConfig.sprite && bulbConfig.isLit) {
+                    const bulbPos = gridToWorld(bulbConfig.x, bulbConfig.y);
+                    
+                    // Create multiple sparkle particles
+                    for (let i = 0; i < 12; i++) {
+                        setTimeout(() => {
+                            const angle = (i / 12) * Math.PI * 2;
+                            const distance = 40 + Math.random() * 20;
+                            const sparkleX = bulbPos.x + Math.cos(angle) * distance;
+                            const sparkleY = bulbPos.y + Math.sin(angle) * distance;
+                            
+                            const sparkle = scene.add.star(sparkleX, sparkleY, 5, 4, 8, 0xFFD700);
+                            sparkle.setAlpha(1);
+                            
+                            // Animate sparkle
+                            scene.tweens.add({
+                                targets: sparkle,
+                                scaleX: 0,
+                                scaleY: 0,
+                                alpha: 0,
+                                rotation: Math.PI * 2,
+                                duration: 1000,
+                                ease: 'Power2',
+                                onComplete: () => sparkle.destroy()
+                            });
+                        }, delay + i * 100);
+                    }
                 }
+            };
+            
+            // Handle single bulb (Stage 1 & 2)
+            if (gameState.bulb) {
+                createSparklesForBulb(gameState.bulb);
+            }
+            
+            // Handle dual bulbs (Stage 3)
+            if (gameState.bulbs) {
+                gameState.bulbs.forEach((bulb, index) => {
+                    createSparklesForBulb(bulb, index * 200); // Stagger the sparkles
+                });
             }
             
             // Add screen flash effect
@@ -4013,17 +5150,10 @@
             }
         }
 
-        document.getElementById('play-again-btn').addEventListener('click', function() {
-            hideSuccessModal();
-            resetGame();
-        });
+        // Success modal buttons are now handled dynamically in updateSuccessActions()
 
         // Add event listener for new challenge button
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('new-challenge-btn').addEventListener('click', function() {
-                hideSuccessModal();
-                createNewChallenge();
-            });
             
             // Add click outside modal to close
             document.getElementById('success-modal').addEventListener('click', function(e) {
@@ -4128,6 +5258,9 @@
         function clearExistingComponents() {
             console.log('Clearing existing components...');
             
+            // First, clear all placed items from the circuit (similar to resetGame logic)
+            clearPlacedItems();
+            
             // Clear all sprites from the scene more aggressively
             if (scene && scene.children) {
                 const children = scene.children.list.slice(); // Create a copy to avoid modification during iteration
@@ -4153,7 +5286,7 @@
                 gameState.battery.sprite = null;
             }
             
-            // Clear bulb sprite and glow effect
+            // Clear single bulb sprite and glow effect
             if (gameState.bulb && gameState.bulb.sprite) {
                 try {
                     gameState.bulb.sprite.destroy();
@@ -4175,6 +5308,32 @@
             }
             if (gameState.bulb) {
                 gameState.bulb.isLit = false;
+            }
+            
+            // Clear dual bulbs (Stage 3)
+            if (gameState.bulbs) {
+                gameState.bulbs.forEach(bulb => {
+                    if (bulb.sprite) {
+                        try {
+                            bulb.sprite.destroy();
+                        } catch (error) {
+                            console.warn('Error destroying bulb sprite:', error);
+                        }
+                        bulb.sprite = null;
+                    }
+                    if (bulb.glowEffect) {
+                        try {
+                            bulb.glowEffect.destroy();
+                        } catch (error) {
+                            console.warn('Error destroying glow effect:', error);
+                        }
+                        bulb.glowEffect = null;
+                    }
+                    if (bulb.bulbSprite) {
+                        bulb.bulbSprite = null;
+                    }
+                    bulb.isLit = false;
+                });
             }
             
             // Clear existing gaps
@@ -4219,6 +5378,22 @@
                 gameState.connectionGraphics = [];
             }
             
+            // Clear flow visualization (red line indicators from short circuits)
+            if (gameState.flowVisualization) {
+                console.log('Clearing flow visualization during stage switch, count:', gameState.flowVisualization.length);
+                gameState.flowVisualization.forEach(particle => {
+                    // Clean up animation timers
+                    if (particle.animationTimer) {
+                        particle.animationTimer.destroy();
+                    }
+                    if (particle.destroy) particle.destroy();
+                });
+                gameState.flowVisualization = [];
+            }
+            
+            // Reset circuit state to clear any short circuit conditions
+            gameState.circuitState = 'incomplete';
+            
             // Completely clear and reinitialize the grid
             clearGridCompletely();
             
@@ -4226,6 +5401,134 @@
             drawGrid();
             
             console.log('All components cleared');
+        }
+        
+        function clearPlacedItems() {
+            console.log('Clearing placed items...');
+            
+            // First, aggressively clean up all HTML elements that might be placed items
+            const canvas = document.querySelector('canvas');
+            if (canvas && canvas.parentElement) {
+                const canvasContainer = canvas.parentElement;
+                // Remove any HTML elements that look like placed items
+                const itemElements = canvasContainer.querySelectorAll('div[style*="background-image"][style*="assets/items"]');
+                console.log('Found', itemElements.length, 'HTML item elements to remove');
+                itemElements.forEach(element => {
+                    console.log('Removing HTML item element:', element);
+                    element.remove();
+                });
+                
+                // Also remove any absolutely positioned divs that might be items
+                const absoluteElements = canvasContainer.querySelectorAll('div[style*="position: absolute"]');
+                absoluteElements.forEach(element => {
+                    // Check if it looks like an item (has background-image with assets/items)
+                    if (element.style.backgroundImage && element.style.backgroundImage.includes('assets/items')) {
+                        console.log('Removing absolute positioned item element:', element);
+                        element.remove();
+                    }
+                });
+            }
+            
+            // Remove all placed items from circuit by scanning the entire grid
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    const gridItem = gameState.grid[y][x];
+                    // Only remove items that are actual placed items (not pre-placed components)
+                    if (gridItem && typeof gridItem === 'object' && 
+                        gridItem.inBank !== undefined && gridItem.placed === true) {
+                        console.log('Removing placed item from grid:', gridItem.name, 'at', x, y);
+                        
+                        // Clear the grid position first
+                        gameState.grid[y][x] = null;
+                        
+                        // Clean up HTML element if it exists
+                        if (gridItem.sprite && gridItem.sprite.htmlElement) {
+                            try {
+                                gridItem.sprite.htmlElement.remove();
+                            } catch (error) {
+                                console.warn('Error removing HTML element:', error);
+                            }
+                        }
+                        
+                        // Destroy the sprite if it exists
+                        if (gridItem.sprite) {
+                            try {
+                                if (gridItem.sprite.children && gridItem.sprite.children.entries) {
+                                    gridItem.sprite.children.entries.forEach(child => {
+                                        if (child) {
+                                            child.setVisible(false);
+                                            child.destroy();
+                                        }
+                                    });
+                                }
+                                if (gridItem.sprite.clear) {
+                                    gridItem.sprite.clear(true, true);
+                                }
+                                gridItem.sprite.destroy();
+                            } catch (error) {
+                                console.warn('Error destroying sprite during cleanup:', error);
+                            }
+                            gridItem.sprite = null;
+                            gridItem.mainSprite = null;
+                        }
+                        
+                        // Reset item state completely
+                        gridItem.inBank = true;
+                        gridItem.placed = false;
+                        gridItem.gridX = -1;
+                        gridItem.gridY = -1;
+                        gridItem.isDragging = false;
+                        
+                        // Clear any stored positions
+                        gridItem.originalX = undefined;
+                        gridItem.originalY = undefined;
+                        gridItem.originalGridX = undefined;
+                        gridItem.originalGridY = undefined;
+                        
+                        // Clean up any removal hints
+                        if (gridItem.removalHint) {
+                            gridItem.removalHint.destroy();
+                            gridItem.removalHint = null;
+                        }
+                    }
+                }
+            }
+            
+            // Clear placed items array
+            gameState.placedItems = [];
+            console.log('Cleared placedItems array');
+            
+            // Reset circuit state to clear any short circuit indicators
+            gameState.circuitState = 'incomplete';
+            
+            // Restore all items to original quantities in item bank
+            gameState.itemBank.forEach(item => {
+                // Reset item state to be in bank
+                item.inBank = true;
+                item.placed = false;
+                item.gridX = -1;
+                item.gridY = -1;
+                item.isDragging = false;
+                
+                // Clear any stored positions
+                item.originalX = undefined;
+                item.originalY = undefined;
+                item.originalGridX = undefined;
+                item.originalGridY = undefined;
+                
+                // Show HTML element again with proper styling
+                if (item.htmlElement) {
+                    item.htmlElement.style.display = 'block';
+                    item.htmlElement.style.opacity = '1';
+                    item.htmlElement.style.transform = 'scale(1)';
+                    item.htmlElement.style.position = 'relative';
+                    item.htmlElement.style.left = '0px';
+                    item.htmlElement.style.top = '0px';
+                    item.htmlElement.style.zIndex = '1';
+                }
+            });
+            
+            console.log('All placed items cleared and item bank restored');
         }
         
         function clearGridCompletely() {
@@ -4239,7 +5542,22 @@
         }
         
         function loadCircuitLayout(layoutName) {
-            console.log('Loading circuit layout:', layoutName);
+            console.log('=== LOADING CIRCUIT LAYOUT:', layoutName, '===');
+            console.log('Current placedItems before cleanup:', gameState.placedItems.length);
+            console.log('Current grid state before cleanup - checking for placed items...');
+            
+            // Debug: Check current grid state
+            let placedItemsInGrid = 0;
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    const gridItem = gameState.grid[y][x];
+                    if (gridItem && typeof gridItem === 'object' && gridItem.inBank !== undefined && gridItem.placed === true) {
+                        placedItemsInGrid++;
+                        console.log('Found placed item in grid before cleanup:', gridItem.name, 'at', x, y);
+                    }
+                }
+            }
+            console.log('Total placed items found in grid before cleanup:', placedItemsInGrid);
             
             if (!gameState.circuitLayouts[layoutName]) {
                 console.error('Circuit layout not found:', layoutName);
@@ -4249,14 +5567,46 @@
             const layout = gameState.circuitLayouts[layoutName];
             
             // Clear everything first
+            console.log('Starting clearExistingComponents...');
             clearExistingComponents();
+            console.log('Finished clearExistingComponents');
             
             // Set current layout
             gameState.currentLayout = layoutName;
             
+            // Update stage selector UI
+            updateStageSelector(layoutName);
+            
+            // Update stage title display
+            updateStageTitle(layoutName);
+            
+            // Clear feedback area
+            const feedbackArea = document.getElementById('feedback-area');
+            if (feedbackArea) {
+                feedbackArea.textContent = 'Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.';
+                feedbackArea.className = ''; // Remove any success/error classes
+            }
+            
+            // Close any open modals
+            const successModal = document.getElementById('success-modal');
+            if (successModal) {
+                successModal.style.display = 'none';
+            }
+            
             // Load layout configuration
             gameState.battery = { ...layout.battery, sprite: null };
-            gameState.bulb = { ...layout.bulb, sprite: null, isLit: false };
+            
+            // Handle single bulb (Stage 1 & 2) or dual bulbs (Stage 3)
+            if (layout.bulbs) {
+                // Stage 3: Multiple bulbs
+                gameState.bulbs = layout.bulbs.map(bulb => ({ ...bulb, sprite: null }));
+                gameState.bulb = null; // Clear single bulb for Stage 3
+            } else {
+                // Stage 1 & 2: Single bulb
+                gameState.bulb = { ...layout.bulb, sprite: null, isLit: false };
+                gameState.bulbs = null; // Clear multiple bulbs for Stage 1 & 2
+            }
+            
             gameState.gaps = layout.gaps.map(gap => ({ ...gap, sprite: null }));
             gameState.preplacedWires = layout.preplacedWires.map(wire => ({ ...wire, sprite: null }));
             
@@ -4266,7 +5616,196 @@
             // Update wire connections
             updateWireConnections();
             
+            // Debug: Verify cleanup was successful
+            console.log('=== CLEANUP VERIFICATION ===');
+            console.log('PlacedItems after cleanup:', gameState.placedItems.length);
+            let remainingPlacedItems = 0;
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    const gridItem = gameState.grid[y][x];
+                    if (gridItem && typeof gridItem === 'object' && gridItem.inBank !== undefined && gridItem.placed === true) {
+                        remainingPlacedItems++;
+                        console.warn('CLEANUP FAILED: Found remaining placed item:', gridItem.name, 'at', x, y);
+                    }
+                }
+            }
+            console.log('Remaining placed items in grid after cleanup:', remainingPlacedItems);
+            
+            // Check for remaining HTML elements
+            const canvas = document.querySelector('canvas');
+            if (canvas && canvas.parentElement) {
+                const remainingElements = canvas.parentElement.querySelectorAll('div[style*="background-image"][style*="assets/items"]');
+                console.log('Remaining HTML item elements after cleanup:', remainingElements.length);
+                if (remainingElements.length > 0) {
+                    console.warn('CLEANUP FAILED: Found remaining HTML elements:', remainingElements);
+                }
+            }
+            
             console.log('Circuit layout loaded:', layoutName);
+        }
+
+        function resetCurrentStage() {
+            console.log('Starting current stage reset...');
+            
+            // 1. Remove all placed items from circuit by scanning the entire grid
+            for (let y = 0; y < gameState.gridHeight; y++) {
+                for (let x = 0; x < gameState.gridWidth; x++) {
+                    const gridItem = gameState.grid[y][x];
+                    // Only remove items that are actual placed items (not pre-placed components)
+                    if (gridItem && typeof gridItem === 'object' && 
+                        gridItem.inBank !== undefined && gridItem.placed === true) {
+                        console.log('Removing placed item from grid:', gridItem.name, 'at', x, y);
+                        
+                        // Clear the grid position first
+                        gameState.grid[y][x] = null;
+                        
+                        // Clean up HTML element if it exists
+                        if (gridItem.sprite && gridItem.sprite.htmlElement) {
+                            gridItem.sprite.htmlElement.remove();
+                        }
+                        
+                        // Destroy the sprite if it exists
+                        if (gridItem.sprite) {
+                            try {
+                                if (gridItem.sprite.children && gridItem.sprite.children.entries) {
+                                    gridItem.sprite.children.entries.forEach(child => {
+                                        if (child) {
+                                            child.setVisible(false);
+                                            child.destroy();
+                                        }
+                                    });
+                                }
+                                gridItem.sprite.clear(true, true);
+                                gridItem.sprite.destroy();
+                            } catch (error) {
+                                console.warn('Error destroying sprite during reset:', error);
+                            }
+                            gridItem.sprite = null;
+                            gridItem.mainSprite = null;
+                        }
+                        
+                        // Reset item state completely
+                        gridItem.inBank = true;
+                        gridItem.placed = false;
+                        gridItem.gridX = -1;
+                        gridItem.gridY = -1;
+                        gridItem.isDragging = false;
+                        
+                        // Clear any stored positions
+                        gridItem.originalX = undefined;
+                        gridItem.originalY = undefined;
+                        gridItem.originalGridX = undefined;
+                        gridItem.originalGridY = undefined;
+                        
+                        // Clean up any removal hints
+                        if (gridItem.removalHint) {
+                            gridItem.removalHint.destroy();
+                            gridItem.removalHint = null;
+                        }
+                    }
+                }
+            }
+            
+            // 2. Clear placed items array
+            gameState.placedItems = [];
+            console.log('Cleared placedItems array');
+            
+            // 3. Restore all items to original quantities in item bank
+            gameState.itemBank.forEach(item => {
+                // Reset item state to be in bank
+                item.inBank = true;
+                item.placed = false;
+                item.gridX = -1;
+                item.gridY = -1;
+                item.isDragging = false;
+                
+                // Clear any stored positions
+                item.originalX = undefined;
+                item.originalY = undefined;
+                item.originalGridX = undefined;
+                item.originalGridY = undefined;
+                
+                // Show HTML element again with proper styling
+                if (item.htmlElement) {
+                    item.htmlElement.style.display = 'flex';
+                    item.htmlElement.style.cursor = 'grab';
+                    item.htmlElement.style.opacity = '1';
+                    item.htmlElement.style.transform = 'scale(1)';
+                    item.htmlElement.style.boxShadow = '';
+                    item.htmlElement.style.animation = '';
+                }
+                
+                console.log('Restored item to bank:', item.name);
+            });
+            
+            // 4. Clear all gap positions back to empty state
+            gameState.gaps.forEach(gap => {
+                gap.filled = false;
+                gap.filledWith = null;
+                if (gap.sprite) {
+                    gap.sprite.setVisible(true);
+                }
+                
+                // Ensure all gap cells are marked as 'gap' in the grid
+                const gapSize = gap.size || { width: 1, height: 1 };
+                for (let dy = 0; dy < gapSize.height; dy++) {
+                    for (let dx = 0; dx < gapSize.width; dx++) {
+                        setGridPosition(gap.x + dx, gap.y + dy, 'gap');
+                    }
+                }
+                
+                console.log('Reset gap at position:', gap.x, gap.y, 'size:', gapSize);
+            });
+            
+            // 5. Turn off light bulb and clear any success states
+            updateLightBulb(false);
+            
+            // Reset circuit state to incomplete (clears short circuit state)
+            gameState.circuitState = 'incomplete';
+            
+            // Clear flow visualization
+            if (gameState.flowVisualization) {
+                gameState.flowVisualization.forEach(particle => {
+                    if (particle.destroy) particle.destroy();
+                });
+                gameState.flowVisualization = [];
+            }
+            
+            // Hide success modal if it's showing
+            const successModal = document.getElementById('success-modal');
+            if (successModal && successModal.style.display !== 'none') {
+                successModal.style.display = 'none';
+            }
+            
+            // Clear any drag state
+            gameState.draggedItem = null;
+            gameState.isDragging = false;
+            document.body.style.cursor = 'default';
+            
+            // Clear any drop zone highlights
+            highlightDropZones(false);
+            
+            // Clean up any remaining HTML elements from placed items in canvas container
+            const canvas = document.querySelector('canvas');
+            const canvasContainer = canvas.parentElement;
+            if (canvasContainer) {
+                const itemElements = canvasContainer.querySelectorAll('div[style*="background-image"][style*="assets/items"]');
+                itemElements.forEach(element => {
+                    element.remove();
+                });
+            }
+            
+            // 6. Redraw base circuit with only pre-placed components
+            // Clear connection graphics first
+            clearConnectionGraphics();
+            
+            // Update wire connections to show base circuit only
+            updateWireConnections();
+            
+            // Reset feedback to initial state
+            showFeedback('Try different materials in the gaps to see which ones allow electricity to flow! Drag placed items away to remove them.', 'info');
+            
+            console.log('Current stage reset finished - all items returned to bank, gaps cleared, bulb off, staying in current stage');
         }
 
         function resetGame() {
@@ -4385,6 +5924,9 @@
             // 5. Turn off light bulb and clear any success states
             updateLightBulb(false);
             
+            // Reset circuit state to incomplete (clears short circuit state)
+            gameState.circuitState = 'incomplete';
+            
             // Clear flow visualization
             if (gameState.flowVisualization) {
                 gameState.flowVisualization.forEach(particle => {
@@ -4442,7 +5984,7 @@
         }
 
         document.getElementById('reset-btn').addEventListener('click', function() {
-            resetGame();
+            resetCurrentStage();
         });
 
         // Start the game

@@ -234,3 +234,90 @@ This feature involves creating an educational game for children to learn about e
 3. WHEN dragging items THEN the system SHALL ensure the drag preview accurately represents the size of the item being placed
 4. WHEN the drag preview is created THEN the system SHALL use the same visual dimensions as the original item in the bank
 5. WHEN dragging multi-cell items THEN the system SHALL maintain proper proportions without size reduction
+### R
+equirement 19
+
+**User Story:** As a child learning about electrical safety, I want to see what happens when I create a short circuit in Stage 2, so that I can understand the dangers of short circuits and learn how to avoid them.
+
+#### Acceptance Criteria
+
+1. WHEN I place conductors in BOTH the 2-slot missing part indicator at (3, 4) to (4, 4) AND the 3-slot missing part indicator from (6, 6) to (6, 8) in Stage 2 THEN the system SHALL create a short circuit condition
+2. WHEN a short circuit is created THEN the system SHALL keep the light bulb off instead of lighting it up
+3. WHEN a short circuit occurs THEN the system SHALL show electrical current and charges flowing from battery's + terminal through the 2-slot conductor at (3, 4) to (4, 4), through the (6, 4) T-shaped wire, through the 3-slot conductor at (6, 6) to (6, 8), through the (6, 10) T-shaped wire, then back to the battery's - terminal
+4. WHEN a short circuit is active THEN the system SHALL display electrical charges and current flow indicators in red color instead of the usual yellow to indicate danger
+5. WHEN I test a circuit with a short circuit condition THEN the system SHALL display a warning modal instead of a success modal
+6. WHEN the short circuit warning modal appears THEN the system SHALL explain that a short circuit has been detected and the circuit needs to be updated
+7. WHEN the short circuit warning modal is displayed THEN the system SHALL provide a brief, age-appropriate explanation about what a short circuit is and the possible hazards it may cause
+8. WHEN the short circuit warning modal is displayed THEN the system SHALL include small tips on how to avoid short circuits in electrical systems
+9. WHEN the short circuit explanation is provided THEN the system SHALL use language and content appropriate for audiences of all ages
+10. WHEN the short circuit warning modal is shown THEN the system SHALL provide options to try again or reset the circuit
+11. WHEN switching between stages THEN the system SHALL clear any existing red line indicators from previous short circuit conditions
+#
+## Requirement 20
+
+**User Story:** As a child who successfully completes Stage 2, I want to see educational information about short circuits in the success modal, so that I can learn about electrical safety concepts even when I solve the circuit correctly.
+
+#### Acceptance Criteria
+
+1. WHEN I complete Stage 2 successfully without creating a short circuit THEN the system SHALL display the success modal with standard congratulatory content
+2. WHEN the Stage 2 success modal is displayed THEN the system SHALL include a "What you learned" section
+3. WHEN the "What you learned" section is shown THEN the system SHALL provide age-appropriate information about what short circuits are
+4. WHEN the short circuit education is displayed THEN the system SHALL explain that short circuits happen when electricity takes an unintended shortcut path
+5. WHEN the short circuit education is displayed THEN the system SHALL explain that short circuits can be dangerous because they allow too much electricity to flow too quickly
+6. WHEN the short circuit education is displayed THEN the system SHALL mention that in real life, short circuits can damage equipment or cause fires
+7. WHEN the short circuit education is displayed THEN the system SHALL explain how parallel circuits (like in Stage 2) can help prevent short circuits by providing multiple safe paths for electricity
+8. WHEN the educational content is shown THEN the system SHALL use simple, child-friendly language appropriate for the target audience
+9. WHEN the Stage 2 success modal is displayed THEN the system SHALL maintain the same congratulatory tone while adding the educational component
+10. WHEN the "What you learned" section is included THEN the system SHALL not overwhelm the success celebration but enhance the learning experience
+
+### Requirement 21
+
+**User Story:** As a child who successfully completes Stage 2, I want to progress to Stage 3 "Series Circuit" with a more complex series circuit layout, so that I can learn about series circuits and how all components must be connected for the circuit to work.
+
+#### Acceptance Criteria
+
+1. WHEN I complete Stage 2 successfully THEN the system SHALL display a "Next Stage" button in the success modal
+2. WHEN I click the "Next Stage" button from Stage 2 THEN the system SHALL load Stage 3 "Series Circuit"
+3. WHEN Stage 3 loads THEN the system SHALL display the title "Stage 3: Series Circuit"
+4. WHEN Stage 3 is displayed THEN the system SHALL show a battery positioned at grid coordinates (1, 4) to (1, 8)
+5. WHEN Stage 3 is displayed THEN the system SHALL show two light bulbs positioned at (7, 3) to (9, 3) and (7, 11) to (9, 11)
+6. WHEN Stage 3 is displayed THEN the system SHALL show L-shaped wires at positions (1, 4), (1, 10), (10, 4), and (10, 10)
+7. WHEN Stage 3 is displayed THEN the system SHALL show straight wires connecting the circuit components in a series configuration
+8. WHEN Stage 3 is displayed THEN the system SHALL show missing part indicators at positions (4, 4) to (6, 4), (4, 10) to (6, 10), (6, 6) to (6, 8), and (12, 6) to (12, 8)
+9. WHEN Stage 3 circuit is evaluated THEN the system SHALL require ALL missing parts to be filled with conductors for both light bulbs to light up
+10. WHEN Stage 3 has even one missing conductor or any insulator in the circuit path THEN the system SHALL keep both light bulbs off
+
+### Requirement 22
+
+**User Story:** As a child learning about series circuits, I want the Stage 3 circuit to demonstrate that all components must be connected in a single path, so that I understand how series circuits work differently from parallel circuits.
+
+#### Acceptance Criteria
+
+1. WHEN Stage 3 loads THEN the system SHALL center the entire series circuit layout within the 15x15 grid
+2. WHEN Stage 3 is displayed THEN the system SHALL show continuous wire connections forming a single series path
+3. WHEN Stage 3 wires are displayed THEN the system SHALL create a path that connects battery → first light bulb → second light bulb → back to battery
+4. WHEN Stage 3 wires are displayed THEN the system SHALL show that electricity must flow through both light bulbs in sequence
+5. WHEN items are placed in Stage 3 THEN the system SHALL maintain continuous wire connections between all conductive components
+6. WHEN Stage 3 circuit is complete with all conductors THEN the system SHALL light up both bulbs simultaneously
+7. WHEN Stage 3 circuit has any gap or insulator THEN the system SHALL keep both bulbs off to demonstrate series circuit behavior
+8. WHEN Stage 3 circuit is complete THEN the system SHALL visually demonstrate how current flows through the entire series path
+
+### Requirement 23
+
+**User Story:** As a child who successfully completes Stage 3, I want to see educational information about series circuits in the success modal, so that I can learn about how series circuits work and their real-world applications.
+
+#### Acceptance Criteria
+
+1. WHEN I complete Stage 3 successfully THEN the system SHALL display the success modal with congratulatory content
+2. WHEN the Stage 3 success modal is displayed THEN the system SHALL include a "What you learned" section
+3. WHEN the "What you learned" section is shown THEN the system SHALL provide age-appropriate information about what series circuits are
+4. WHEN the series circuit education is displayed THEN the system SHALL explain that series circuits have components connected in a single path
+5. WHEN the series circuit education is displayed THEN the system SHALL explain that electricity must flow through all components in order
+6. WHEN the series circuit education is displayed THEN the system SHALL explain that if one component fails, the entire circuit stops working
+7. WHEN the series circuit education is displayed THEN the system SHALL mention real-world examples like old Christmas lights or flashlights
+8. WHEN the series circuit education is displayed THEN the system SHALL compare series circuits to parallel circuits from Stage 2
+9. WHEN the educational content is shown THEN the system SHALL use simple, child-friendly language appropriate for the target audience
+10. WHEN the Stage 3 success modal is displayed THEN the system SHALL maintain the same congratulatory tone while adding the educational component
+11. WHEN the "What you learned" section discusses series circuits THEN the system SHALL clearly define what a series circuit is using simple terms like "components connected one after another in a chain"
+12. WHEN explaining series circuits THEN the system SHALL emphasize that all parts must work together for the circuit to function
+13. WHEN the series circuit explanation is provided THEN the system SHALL include visual metaphors that children can understand, such as comparing it to a chain where if one link breaks, the whole chain fails
