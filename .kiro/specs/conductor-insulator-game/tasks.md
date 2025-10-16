@@ -286,6 +286,16 @@
   - Clear any visual artifacts from previous short circuit states during stage transitions
   - _Requirements: 19.11_
 
+- [ ] 32. Implement fixed Stage 4 charge flow animation
+  - Rewrite buildFourthCircuitPath function to create two separate, complete circuit paths
+  - Implement left bulb circuit path that follows: battery+ → top wire → left bulb → bottom wire → battery-
+  - Implement right bulb circuit path that follows: battery+ → top wire → right bulb → bottom wire → battery-
+  - Ensure both paths share the common wire segments from battery to T-junction and from T-junction back to battery
+  - Remove any direct jumps between non-adjacent positions in the charge animation
+  - Test that charges flow smoothly along the wire paths without criss-crossing
+  - Verify that the animation clearly shows two parallel electrical paths through the circuit
+  - _Requirements: Stage 4 visual clarity and educational accuracy_
+
 - [ ]* 23. Add educational enhancements and additional features
   - Include explanatory text about conductors and insulators
   - Add sound effects for interactions and success
@@ -367,3 +377,15 @@
   - Ensure visual clarity when showing the single series path through multiple components
   - Maintain proper terminal connections for dual bulb configuration
   - _Requirements: 22.2, 22.5, 22.8_
+
+- [-] 31. Fix Stage 4 charge flow to follow proper wire paths instead of criss-crossing
+
+
+
+  - Fix buildFourthCircuitPath function to create separate continuous paths for each bulb
+  - Create left bulb path: battery positive → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (6,5) → left bulb → (6,9) → (6,10) → (5,10) → (4,10) → (3,10) → (2,10) → (1,10) → (1,9) → battery negative
+  - Create right bulb path: battery positive → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (7,4) → gaps (8,4)-(10,4) → (11,4) → (12,4) → (12,5) → right bulb → (12,9) → (12,10) → (11,10) → (10,10) → gap (9,10) → (8,10) → (7,10) → (6,10) → (5,10) → (4,10) → (3,10) → (2,10) → (1,10) → (1,9) → battery negative
+  - Ensure charges flow through continuous wire connections without jumping between disconnected positions
+  - Remove the criss-crossing behavior where charges from (6,10) jump to (1,5) and charges from (1,9) jump to (6,4)
+  - Test charge flow animation to verify proper electrical path visualization for both parallel circuits
+  - _Requirements: Stage 4 charge flow accuracy and visual clarity_

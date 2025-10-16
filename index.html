@@ -837,8 +837,8 @@
                     // Top horizontal gaps: M M at (3,4)-(4,4), M M M at (8,4)-(10,4)
                     { x: 3, y: 4, filled: false, size: { width: 2, height: 1 } },
                     { x: 8, y: 4, filled: false, size: { width: 3, height: 1 } },
-                    // Bottom horizontal gap: M at (10,10)
-                    { x: 10, y: 10, filled: false, size: { width: 1, height: 1 } }
+                    // Bottom horizontal gap: M at (9,10) - shifted 1 cell to the left
+                    { x: 9, y: 10, filled: false, size: { width: 1, height: 1 } }
                 ],
                 preplacedWires: [
                     // Top horizontal wire (row 4): L H M M H T H M M M H L
@@ -864,7 +864,7 @@
                     { x: 12, y: 5 },  // V - Vertical wire
                     { x: 12, y: 9 },  // V - Vertical wire
                     
-                    // Bottom horizontal wire (row 10): L H H H H T H H H M H L
+                    // Bottom horizontal wire (row 10): L H H H H T H H M H H L
                     { x: 1, y: 10 },  // L - L-shaped wire (battery connection)
                     { x: 2, y: 10 },  // H - Horizontal wire
                     { x: 3, y: 10 },  // H - Horizontal wire
@@ -873,8 +873,8 @@
                     { x: 6, y: 10 },  // T - T-shaped wire (first bulb connection)
                     { x: 7, y: 10 },  // H - Horizontal wire
                     { x: 8, y: 10 },  // H - Horizontal wire
-                    { x: 9, y: 10 },  // H - Horizontal wire
-                    // Gap at (10,10) - M
+                    // Gap at (9,10) - M (shifted 1 cell to the left)
+                    { x: 10, y: 10 }, // H - Horizontal wire
                     { x: 11, y: 10 }, // H - Horizontal wire
                     { x: 12, y: 10 }  // L - L-shaped wire (second bulb connection)
                 ]
@@ -4177,16 +4177,17 @@
                 const pos11_10 = gridToWorld(11, 10);
                 pathGraphics.lineTo(pos11_10.x, pos11_10.y);
                 
-                // Check if the bottom gap (10,10) is filled
-                if (isConductive(10, 10)) {
-                    const pos10_10 = gridToWorld(10, 10);
-                    pathGraphics.lineTo(pos10_10.x, pos10_10.y);
+                // Check if the bottom gap (9,10) is filled - updated position
+                if (isConductive(9, 10)) {
+                    const pos9_10 = gridToWorld(9, 10);
+                    pathGraphics.lineTo(pos9_10.x, pos9_10.y);
                     
                     // Continue to bottom horizontal wires
-                    for (let x = 9; x >= 7; x--) {
-                        const pos = gridToWorld(x, 10);
-                        pathGraphics.lineTo(pos.x, pos.y);
-                    }
+                    const pos8_10 = gridToWorld(8, 10);
+                    pathGraphics.lineTo(pos8_10.x, pos8_10.y);
+                    
+                    const pos7_10 = gridToWorld(7, 10);
+                    pathGraphics.lineTo(pos7_10.x, pos7_10.y);
                     
                     // Continue to T-junction
                     pathGraphics.lineTo(bottomTJunctionPos.x, bottomTJunctionPos.y);
@@ -4792,19 +4793,44 @@
                 return [];
             }
             
-            const path = [];
+            const paths = [];
             
             console.log('Building fourth circuit path (parallel circuit)...');
+            
+            // Create separate path for left bulb (bulb1)
+            if (gameState.bulbs[0].isLit) {
+                const leftBulbPath = buildLeftBulbPath();
+                if (leftBulbPath.length > 0) {
+                    paths.push(...leftBulbPath);
+                }
+            }
+            
+            // Create separate path for right bulb (bulb2)
+            if (gameState.bulbs[1].isLit) {
+                const rightBulbPath = buildRightBulbPath();
+                if (rightBulbPath.length > 0) {
+                    paths.push(...rightBulbPath);
+                }
+            }
+            
+            console.log(`Fourth circuit path built with ${paths.length} points`);
+            return paths;
+        }
+
+        function buildLeftBulbPath() {
+            const path = [];
+            
+            // Left bulb path: battery positive → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (6,5) → left bulb → (6,9) → (6,10) → (5,10) → (4,10) → (3,10) → (2,10) → (1,10) → (1,9) → battery negative
             
             // Start at battery positive terminal (top cell)
             const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
             path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
             
             // Connection to L-shaped wire at (1,4)
-            const batteryLWirePos = gridToWorld(1, 4);
-            path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
+            const pos1_4 = gridToWorld(1, 4);
+            path.push({ x: pos1_4.x, y: pos1_4.y, isWire: true });
             
-            // Top horizontal wire from battery toward first bulb
+            // Horizontal wire to (2,4)
             const pos2_4 = gridToWorld(2, 4);
             path.push({ x: pos2_4.x, y: pos2_4.y, isWire: true });
             
@@ -4816,85 +4842,178 @@
                 path.push({ x: pos4_4.x, y: pos4_4.y, isWire: true });
             }
             
-            // Continue to wire before T-junction
+            // Continue to wire at (5,4)
             const pos5_4 = gridToWorld(5, 4);
             path.push({ x: pos5_4.x, y: pos5_4.y, isWire: true });
             
-            // Connection to T-junction at (6,4) and first bulb
-            const tJunctionPos = gridToWorld(6, 4);
-            path.push({ x: tJunctionPos.x, y: tJunctionPos.y, isWire: true });
+            // Connection to T-junction at (6,4)
+            const pos6_4 = gridToWorld(6, 4);
+            path.push({ x: pos6_4.x, y: pos6_4.y, isWire: true });
             
-            // Branch down to first bulb
+            // Branch down through vertical wire to (6,5)
+            const pos6_5 = gridToWorld(6, 5);
+            path.push({ x: pos6_5.x, y: pos6_5.y, isWire: true });
+            
+            // Connection to left bulb center
             const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
             path.push({ x: bulb1CenterPos.x, y: bulb1CenterPos.y, isBulb: true });
             
-            // Return path from first bulb to T-junction at (6,10)
-            const bottomTJunctionPos = gridToWorld(6, 10);
-            path.push({ x: bottomTJunctionPos.x, y: bottomTJunctionPos.y, isWire: true });
+            // Return path from left bulb through vertical wire to (6,9)
+            const pos6_9 = gridToWorld(6, 9);
+            path.push({ x: pos6_9.x, y: pos6_9.y, isWire: true });
             
-            // Bottom horizontal wire back to battery
-            for (let x = 5; x >= 1; x--) {
-                if (isConductive(x, 10)) {
-                    const pos = gridToWorld(x, 10);
-                    path.push({ x: pos.x, y: pos.y, isWire: true });
-                }
-            }
+            // Connection to bottom T-junction at (6,10)
+            const pos6_10 = gridToWorld(6, 10);
+            path.push({ x: pos6_10.x, y: pos6_10.y, isWire: true });
+            
+            // Bottom horizontal wire back to battery: (5,10) → (4,10) → (3,10) → (2,10) → (1,10)
+            const pos5_10 = gridToWorld(5, 10);
+            path.push({ x: pos5_10.x, y: pos5_10.y, isWire: true });
+            
+            const pos4_10 = gridToWorld(4, 10);
+            path.push({ x: pos4_10.x, y: pos4_10.y, isWire: true });
+            
+            const pos3_10 = gridToWorld(3, 10);
+            path.push({ x: pos3_10.x, y: pos3_10.y, isWire: true });
+            
+            const pos2_10 = gridToWorld(2, 10);
+            path.push({ x: pos2_10.x, y: pos2_10.y, isWire: true });
+            
+            // Connection to L-shaped wire at (1,10)
+            const pos1_10 = gridToWorld(1, 10);
+            path.push({ x: pos1_10.x, y: pos1_10.y, isWire: true });
+            
+            // Connection vertically to (1,9)
+            const pos1_9 = gridToWorld(1, 9);
+            path.push({ x: pos1_9.x, y: pos1_9.y, isWire: true });
             
             // Battery negative terminal (bottom cell)
             const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
             path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
             
-            // If second bulb is also lit (all gaps filled), add its path
-            if (gameState.bulbs[1].isLit) {
-                // Second parallel path - start from T-junction at (5,4)
-                path.push({ x: tJunctionPos.x, y: tJunctionPos.y, isWire: true });
-                
-                // Continue top horizontal wire toward second bulb
-                const pos7_4 = gridToWorld(7, 4);
-                path.push({ x: pos7_4.x, y: pos7_4.y, isWire: true });
-                
-                // Through the 3-cell gap (8,4)-(10,4) if filled
-                if (isConductive(8, 4) && isConductive(9, 4) && isConductive(10, 4)) {
-                    for (let x = 8; x <= 11; x++) {
-                        if (isConductive(x, 4)) {
-                            const pos = gridToWorld(x, 4);
-                            path.push({ x: pos.x, y: pos.y, isWire: true });
-                        }
-                    }
-                    
-                    // Connection to L-shaped wire at (12,4)
-                    const pos12_4 = gridToWorld(12, 4);
-                    path.push({ x: pos12_4.x, y: pos12_4.y, isWire: true });
-                    
-                    // Connection to second bulb
-                    const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
-                    path.push({ x: bulb2CenterPos.x, y: bulb2CenterPos.y, isBulb: true });
-                    
-                    // Return path from second bulb
-                    const pos12_10 = gridToWorld(12, 10);
-                    path.push({ x: pos12_10.x, y: pos12_10.y, isWire: true });
-                    
-                    const pos11_10 = gridToWorld(11, 10);
-                    path.push({ x: pos11_10.x, y: pos11_10.y, isWire: true });
-                    
-                    // Through bottom gap (10,10) if filled
-                    if (isConductive(10, 10)) {
-                        const pos10_10 = gridToWorld(10, 10);
-                        path.push({ x: pos10_10.x, y: pos10_10.y, isWire: true });
-                        
-                        // Continue to bottom horizontal wires
-                        for (let x = 9; x >= 7; x--) {
-                            const pos = gridToWorld(x, 10);
-                            path.push({ x: pos.x, y: pos.y, isWire: true });
-                        }
-                        
-                        // Back to bottom T-junction
-                        path.push({ x: bottomTJunctionPos.x, y: bottomTJunctionPos.y, isWire: true });
-                    }
-                }
+            return path;
+        }
+
+        function buildRightBulbPath() {
+            const path = [];
+            
+            // Right bulb path: battery positive → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (7,4) → gaps (8,4)-(10,4) → (11,4) → (12,4) → (12,5) → right bulb → (12,9) → (12,10) → (11,10) → (10,10) → gap (9,10) → (8,10) → (7,10) → (6,10) → (5,10) → (4,10) → (3,10) → (2,10) → (1,10) → (1,9) → battery negative
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Connection to L-shaped wire at (1,4)
+            const pos1_4 = gridToWorld(1, 4);
+            path.push({ x: pos1_4.x, y: pos1_4.y, isWire: true });
+            
+            // Horizontal wire to (2,4)
+            const pos2_4 = gridToWorld(2, 4);
+            path.push({ x: pos2_4.x, y: pos2_4.y, isWire: true });
+            
+            // Through the 2-cell gap (3,4)-(4,4) if filled
+            if (isConductive(3, 4) && isConductive(4, 4)) {
+                const pos3_4 = gridToWorld(3, 4);
+                const pos4_4 = gridToWorld(4, 4);
+                path.push({ x: pos3_4.x, y: pos3_4.y, isWire: true });
+                path.push({ x: pos4_4.x, y: pos4_4.y, isWire: true });
             }
             
-            console.log(`Fourth circuit path built with ${path.length} points`);
+            // Continue to wire at (5,4)
+            const pos5_4 = gridToWorld(5, 4);
+            path.push({ x: pos5_4.x, y: pos5_4.y, isWire: true });
+            
+            // Connection to T-junction at (6,4)
+            const pos6_4 = gridToWorld(6, 4);
+            path.push({ x: pos6_4.x, y: pos6_4.y, isWire: true });
+            
+            // Continue right to (7,4)
+            const pos7_4 = gridToWorld(7, 4);
+            path.push({ x: pos7_4.x, y: pos7_4.y, isWire: true });
+            
+            // Through the 3-cell gap (8,4)-(10,4) if filled
+            if (isConductive(8, 4) && isConductive(9, 4) && isConductive(10, 4)) {
+                const pos8_4 = gridToWorld(8, 4);
+                const pos9_4 = gridToWorld(9, 4);
+                const pos10_4 = gridToWorld(10, 4);
+                path.push({ x: pos8_4.x, y: pos8_4.y, isWire: true });
+                path.push({ x: pos9_4.x, y: pos9_4.y, isWire: true });
+                path.push({ x: pos10_4.x, y: pos10_4.y, isWire: true });
+            }
+            
+            // Continue to horizontal wire at (11,4)
+            const pos11_4 = gridToWorld(11, 4);
+            path.push({ x: pos11_4.x, y: pos11_4.y, isWire: true });
+            
+            // Connection to L-shaped wire at (12,4)
+            const pos12_4 = gridToWorld(12, 4);
+            path.push({ x: pos12_4.x, y: pos12_4.y, isWire: true });
+            
+            // Connection through vertical wire to (12,5)
+            const pos12_5 = gridToWorld(12, 5);
+            path.push({ x: pos12_5.x, y: pos12_5.y, isWire: true });
+            
+            // Connection to right bulb center
+            const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+            path.push({ x: bulb2CenterPos.x, y: bulb2CenterPos.y, isBulb: true });
+            
+            // Return path from right bulb through vertical wire to (12,9)
+            const pos12_9 = gridToWorld(12, 9);
+            path.push({ x: pos12_9.x, y: pos12_9.y, isWire: true });
+            
+            // Connection to L-shaped wire at (12,10)
+            const pos12_10 = gridToWorld(12, 10);
+            path.push({ x: pos12_10.x, y: pos12_10.y, isWire: true });
+            
+            // Continue through horizontal wires: (11,10) → (10,10) → gap (9,10) → (8,10) → (7,10) → (6,10) → (5,10) → (4,10) → (3,10) → (2,10) → (1,10)
+            const pos11_10 = gridToWorld(11, 10);
+            path.push({ x: pos11_10.x, y: pos11_10.y, isWire: true });
+            
+            const pos10_10 = gridToWorld(10, 10);
+            path.push({ x: pos10_10.x, y: pos10_10.y, isWire: true });
+            
+            // Through bottom gap (9,10) if filled
+            if (isConductive(9, 10)) {
+                const pos9_10 = gridToWorld(9, 10);
+                path.push({ x: pos9_10.x, y: pos9_10.y, isWire: true });
+            }
+            
+            // Continue to bottom horizontal wires
+            const pos8_10 = gridToWorld(8, 10);
+            path.push({ x: pos8_10.x, y: pos8_10.y, isWire: true });
+            
+            const pos7_10 = gridToWorld(7, 10);
+            path.push({ x: pos7_10.x, y: pos7_10.y, isWire: true });
+            
+            // Back to bottom T-junction at (6,10)
+            const pos6_10 = gridToWorld(6, 10);
+            path.push({ x: pos6_10.x, y: pos6_10.y, isWire: true });
+            
+            // Continue back to battery: (5,10) → (4,10) → (3,10) → (2,10) → (1,10)
+            const pos5_10 = gridToWorld(5, 10);
+            path.push({ x: pos5_10.x, y: pos5_10.y, isWire: true });
+            
+            const pos4_10 = gridToWorld(4, 10);
+            path.push({ x: pos4_10.x, y: pos4_10.y, isWire: true });
+            
+            const pos3_10 = gridToWorld(3, 10);
+            path.push({ x: pos3_10.x, y: pos3_10.y, isWire: true });
+            
+            const pos2_10 = gridToWorld(2, 10);
+            path.push({ x: pos2_10.x, y: pos2_10.y, isWire: true });
+            
+            // Connection to L-shaped wire at (1,10)
+            const pos1_10 = gridToWorld(1, 10);
+            path.push({ x: pos1_10.x, y: pos1_10.y, isWire: true });
+            
+            // Connection vertically to (1,9)
+            const pos1_9 = gridToWorld(1, 9);
+            path.push({ x: pos1_9.x, y: pos1_9.y, isWire: true });
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
             return path;
         }
 
