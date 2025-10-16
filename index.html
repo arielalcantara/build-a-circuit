@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conductor & Insulator Game</title>
+    <title>Build a Circuit</title>
     <style>
         body {
             margin: 0;
@@ -296,6 +296,7 @@
             padding: 10px;
             border-radius: 5px;
             min-height: 40px;
+            max-width: 220px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -526,7 +527,7 @@
     </style>
 </head>
 <body>
-    <h1>⚡ Conductor & Insulator Circuit Game</h1>
+    <h1>⚡ Build a Circuit</h1>
     <p class="game-subtitle">Learn about electricity by building circuits with different materials!</p>
     <div id="stage-title" class="stage-title-display">Stage 1: Basic Circuit</div>
     
@@ -553,6 +554,13 @@
                     <div class="stage-info">
                         <div class="stage-title">Stage 3</div>
                         <div class="stage-description">Series Circuit</div>
+                    </div>
+                </div>
+                <div class="stage-option" data-stage="fourth">
+                    <span class="stage-icon">⚡</span>
+                    <div class="stage-info">
+                        <div class="stage-title">Stage 4</div>
+                        <div class="stage-description">Parallel Circuit</div>
                     </div>
                 </div>
             </div>
@@ -597,7 +605,6 @@
             </div>
             <div id="success-actions">
                 <button id="play-again-btn">🔄 Try Again</button>
-                <button id="new-challenge-btn">⚡ New Challenge</button>
             </div>
         </div>
     </div>
@@ -818,6 +825,58 @@
                     { x: 12, y: 5 },  // W - Vertical wire
                     { x: 12, y: 9 }   // W - Vertical wire
                     // Gap at (12,6) to (12,8) - M M M for right vertical connection
+                ]
+            },
+            fourth: {
+                battery: { x: 1, y: 6, width: 1, height: 3 },  // B at (1,6), (1,7), (1,8) - shifted right
+                bulbs: [
+                    { x: 5, y: 6, width: 3, height: 3, id: 'bulb1', isLit: false },  // First bulb at (5,6) to (7,8) - stays same
+                    { x: 11, y: 6, width: 3, height: 3, id: 'bulb2', isLit: false }   // Second bulb at (11,6) to (13,8) - shifted right
+                ],
+                gaps: [
+                    // Top horizontal gaps: M M at (3,4)-(4,4), M M M at (8,4)-(10,4)
+                    { x: 3, y: 4, filled: false, size: { width: 2, height: 1 } },
+                    { x: 8, y: 4, filled: false, size: { width: 3, height: 1 } },
+                    // Bottom horizontal gap: M at (10,10)
+                    { x: 10, y: 10, filled: false, size: { width: 1, height: 1 } }
+                ],
+                preplacedWires: [
+                    // Top horizontal wire (row 4): L H M M H T H M M M H L
+                    { x: 1, y: 4 },   // L - L-shaped wire (battery connection)
+                    { x: 2, y: 4 },   // H - Horizontal wire
+                    // Gap at (3,4)-(4,4) - M M
+                    { x: 5, y: 4 },   // H - Horizontal wire
+                    { x: 6, y: 4 },   // T - T-shaped wire (first bulb connection)
+                    { x: 7, y: 4 },   // H - Horizontal wire
+                    // Gap at (8,4)-(10,4) - M M M
+                    { x: 11, y: 4 },  // H - Horizontal wire
+                    { x: 12, y: 4 },  // L - L-shaped wire (second bulb connection)
+                    
+                    // Vertical connections for battery
+                    { x: 1, y: 5 },   // V - Vertical wire (battery connection)
+                    { x: 1, y: 9 },   // V - Vertical wire (battery connection)
+                    
+                    // Vertical connections for first bulb (T-junction at x=6)
+                    { x: 6, y: 5 },   // V - Vertical wire
+                    { x: 6, y: 9 },   // V - Vertical wire
+                    
+                    // Vertical connections for second bulb
+                    { x: 12, y: 5 },  // V - Vertical wire
+                    { x: 12, y: 9 },  // V - Vertical wire
+                    
+                    // Bottom horizontal wire (row 10): L H H H H T H H H M H L
+                    { x: 1, y: 10 },  // L - L-shaped wire (battery connection)
+                    { x: 2, y: 10 },  // H - Horizontal wire
+                    { x: 3, y: 10 },  // H - Horizontal wire
+                    { x: 4, y: 10 },  // H - Horizontal wire
+                    { x: 5, y: 10 },  // H - Horizontal wire
+                    { x: 6, y: 10 },  // T - T-shaped wire (first bulb connection)
+                    { x: 7, y: 10 },  // H - Horizontal wire
+                    { x: 8, y: 10 },  // H - Horizontal wire
+                    { x: 9, y: 10 },  // H - Horizontal wire
+                    // Gap at (10,10) - M
+                    { x: 11, y: 10 }, // H - Horizontal wire
+                    { x: 12, y: 10 }  // L - L-shaped wire (second bulb connection)
                 ]
             }
         };
@@ -1061,9 +1120,14 @@
         }
 
         function determineWireType(x, y) {
-            // Only apply T-junction logic for the second circuit layout
+            // Apply T-junction logic for specific circuit layouts
             if (gameState.currentLayout === 'second') {
                 // Specific T-junction positions in the second layout
+                if ((x === 6 && y === 4) || (x === 6 && y === 10)) {
+                    return 'T-shaped';
+                }
+            } else if (gameState.currentLayout === 'fourth') {
+                // Specific T-junction positions in the fourth layout
                 if ((x === 6 && y === 4) || (x === 6 && y === 10)) {
                     return 'T-shaped';
                 }
@@ -1172,6 +1236,11 @@
             } else if (gameState.currentLayout === 'third') {
                 // Third circuit: Vertical wires at (2,5), (2,9), (12,5), (12,9)
                 return (x === 2 && (y === 5 || y === 9)) || 
+                       (x === 12 && (y === 5 || y === 9));
+            } else if (gameState.currentLayout === 'fourth') {
+                // Fourth circuit: Vertical wires at (1,5), (1,9), (6,5), (6,9), (12,5), (12,9)
+                return (x === 1 && (y === 5 || y === 9)) || 
+                       (x === 6 && (y === 5 || y === 9)) || 
                        (x === 12 && (y === 5 || y === 9));
             }
             return false;
@@ -1303,6 +1372,49 @@
                     group.add(verticalWire);
                 } else if (x === 12 && y === 10) {
                     // Right bottom L-wire: connects left and up
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                }
+            } else if (gameState.currentLayout === 'fourth') {
+                // Fourth circuit L-wire positions
+                if (x === 1 && y === 4) {
+                    // Battery top L-wire: connects right and down
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 1 && y === 10) {
+                    // Battery bottom L-wire: connects right and up
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 4) {
+                    // Second bulb top L-wire: connects left and down
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 10) {
+                    // Second bulb bottom L-wire: connects left and up
                     const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
                     const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
                     horizontalWire.setStrokeStyle(1, 0x8B4513);
@@ -3199,6 +3311,9 @@
             } else if (gameState.currentLayout === 'third') {
                 // Third circuit layout with series dual bulbs
                 return findThirdCircuitPath();
+            } else if (gameState.currentLayout === 'fourth') {
+                // Fourth circuit layout with parallel dual bulbs
+                return findFourthCircuitPath();
             } else {
                 // First circuit layout (original)
                 return findFirstCircuitPath();
@@ -3452,6 +3567,95 @@
             return true;
         }
 
+        function findFourthCircuitPath() {
+            // Stage 4: Parallel circuit with dual bulbs
+            // At least one complete path must exist for at least one bulb to light up
+            console.log('Checking Stage 4 parallel circuit path...');
+            
+            // Check if all gaps are filled with conductors for a complete circuit
+            const allGapsConductors = gameState.gaps.every(gap => {
+                // For multi-cell gaps, check all cells in the gap
+                for (let dx = 0; dx < gap.size.width; dx++) {
+                    for (let dy = 0; dy < gap.size.height; dy++) {
+                        const item = getGridPosition(gap.x + dx, gap.y + dy);
+                        if (!item || !item.conductive) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            });
+            
+            if (allGapsConductors) {
+                console.log('Parallel circuit complete - all gaps filled with conductors, both bulbs should light');
+                // Both bulbs light up when all gaps are filled
+                if (gameState.bulbs) {
+                    gameState.bulbs.forEach(bulb => {
+                        bulb.isLit = true;
+                        if (bulb.bulbSprite && bulb.bulbSprite.setFrame) {
+                            bulb.bulbSprite.setFrame(1); // Frame 1 = lit bulb
+                        }
+                    });
+                }
+                return true;
+            }
+            
+            // Check if only the 2-cell gap (3,4)-(4,4) is filled with conductors
+            // This should light up only the left bulb (first bulb)
+            const gap2Cell = gameState.gaps.find(gap => gap.x === 3 && gap.y === 4);
+            if (gap2Cell) {
+                const item1 = getGridPosition(3, 4);
+                const item2 = getGridPosition(4, 4);
+                const gap2CellFilled = item1 && item1.conductive && item2 && item2.conductive;
+                
+                // Check if other gaps are not filled or filled with insulators
+                const otherGaps = gameState.gaps.filter(gap => !(gap.x === 3 && gap.y === 4));
+                const otherGapsNotConductors = otherGaps.every(gap => {
+                    for (let dx = 0; dx < gap.size.width; dx++) {
+                        for (let dy = 0; dy < gap.size.height; dy++) {
+                            const item = getGridPosition(gap.x + dx, gap.y + dy);
+                            if (item && item.conductive) {
+                                return false; // Found a conductor in other gaps
+                            }
+                        }
+                    }
+                    return true; // No conductors found in this gap
+                });
+                
+                if (gap2CellFilled && otherGapsNotConductors) {
+                    console.log('Parallel circuit partial - only 2-cell gap filled, left bulb should light');
+                    // Only the left bulb (first bulb) lights up
+                    if (gameState.bulbs) {
+                        gameState.bulbs[0].isLit = true; // First bulb lights up
+                        if (gameState.bulbs[0].bulbSprite && gameState.bulbs[0].bulbSprite.setFrame) {
+                            gameState.bulbs[0].bulbSprite.setFrame(1); // Frame 1 = lit bulb
+                        }
+                        
+                        // Second bulb stays off
+                        if (gameState.bulbs[1]) {
+                            gameState.bulbs[1].isLit = false;
+                            if (gameState.bulbs[1].bulbSprite && gameState.bulbs[1].bulbSprite.setFrame) {
+                                gameState.bulbs[1].bulbSprite.setFrame(0); // Frame 0 = off bulb
+                            }
+                        }
+                    }
+                    return true;
+                }
+            }
+            
+            console.log('Parallel circuit incomplete - insufficient conductors placed');
+            // Turn off all bulbs if circuit is incomplete
+            if (gameState.bulbs) {
+                gameState.bulbs.forEach(bulb => {
+                    bulb.isLit = false;
+                    if (bulb.bulbSprite && bulb.bulbSprite.setFrame) {
+                        bulb.bulbSprite.setFrame(0); // Frame 0 = off bulb
+                    }
+                });
+            }
+            return false;
+        }
+
         // Visual Connection System Functions
         function updateWireConnections() {
             console.log('Updating wire connections...');
@@ -3598,6 +3802,8 @@
                 drawSecondCircuitPath(pathGraphics);
             } else if (gameState.currentLayout === 'third') {
                 drawThirdCircuitPath(pathGraphics);
+            } else if (gameState.currentLayout === 'fourth') {
+                drawFourthCircuitPath(pathGraphics);
             }
             
             pathGraphics.strokePath();
@@ -3870,6 +4076,122 @@
             // End at battery negative terminal (bottom cell)
             const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
             pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
+        }
+
+        function drawFourthCircuitPath(pathGraphics) {
+            // Fourth circuit path for parallel circuit with dual bulbs
+            if (!gameState.bulbs || gameState.bulbs.length < 2) {
+                console.log('Skipping drawFourthCircuitPath - no dual bulbs');
+                return;
+            }
+            
+            // Start from battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
+            
+            // Connect to L-shaped wire at (1,4)
+            const batteryLWirePos = gridToWorld(1, 4);
+            pathGraphics.lineTo(batteryLWirePos.x, batteryLWirePos.y);
+            
+            // Top horizontal wire from battery toward first bulb
+            const pos2_4 = gridToWorld(2, 4);
+            pathGraphics.lineTo(pos2_4.x, pos2_4.y);
+            
+            // Check if the 2-cell gap (3,4)-(4,4) is filled
+            if (isConductive(3, 4) && isConductive(4, 4)) {
+                const pos3_4 = gridToWorld(3, 4);
+                const pos4_4 = gridToWorld(4, 4);
+                pathGraphics.lineTo(pos3_4.x, pos3_4.y);
+                pathGraphics.lineTo(pos4_4.x, pos4_4.y);
+            }
+            
+            // Continue to wire before T-junction
+            const pos5_4 = gridToWorld(5, 4);
+            pathGraphics.lineTo(pos5_4.x, pos5_4.y);
+            
+            // Connect to T-junction at (6,4) and first bulb
+            const tJunctionPos = gridToWorld(6, 4);
+            pathGraphics.lineTo(tJunctionPos.x, tJunctionPos.y);
+            
+            // Branch down to first bulb
+            const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
+            pathGraphics.lineTo(bulb1CenterPos.x, bulb1CenterPos.y);
+            
+            // Return to T-junction and continue right
+            pathGraphics.moveTo(tJunctionPos.x, tJunctionPos.y);
+            
+            // Continue top horizontal wire toward second bulb
+            const pos7_4 = gridToWorld(7, 4);
+            pathGraphics.lineTo(pos7_4.x, pos7_4.y);
+            
+            // Check if the 3-cell gap (8,4)-(10,4) is filled
+            if (isConductive(8, 4) && isConductive(9, 4) && isConductive(10, 4)) {
+                // Continue through the gap to second bulb
+                for (let x = 8; x <= 11; x++) {
+                    if (isConductive(x, 4)) {
+                        const pos = gridToWorld(x, 4);
+                        pathGraphics.lineTo(pos.x, pos.y);
+                    }
+                }
+                
+                // Connect to L-shaped wire at (12,4)
+                const pos12_4 = gridToWorld(12, 4);
+                pathGraphics.lineTo(pos12_4.x, pos12_4.y);
+                
+                // Connect to second bulb
+                const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+                pathGraphics.lineTo(bulb2CenterPos.x, bulb2CenterPos.y);
+            }
+            
+            // Draw return path through bottom wire
+            // Start from first bulb bottom
+            pathGraphics.moveTo(bulb1CenterPos.x, bulb1CenterPos.y);
+            
+            // Connect to T-junction at (6,10)
+            const bottomTJunctionPos = gridToWorld(6, 10);
+            pathGraphics.lineTo(bottomTJunctionPos.x, bottomTJunctionPos.y);
+            
+            // Bottom horizontal wire back to battery
+            for (let x = 5; x >= 1; x--) {
+                if (isConductive(x, 10)) {
+                    const pos = gridToWorld(x, 10);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                }
+            }
+            
+            // Connect to battery negative terminal
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
+            
+            // If second bulb is also lit, draw its return path
+            if (gameState.bulbs[1].isLit) {
+                // Second bulb return path
+                const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+                pathGraphics.moveTo(bulb2CenterPos.x, bulb2CenterPos.y);
+                
+                // Connect to L-shaped wire at (12,10)
+                const pos12_10 = gridToWorld(12, 10);
+                pathGraphics.lineTo(pos12_10.x, pos12_10.y);
+                
+                // Connect to right side bottom wire
+                const pos11_10 = gridToWorld(11, 10);
+                pathGraphics.lineTo(pos11_10.x, pos11_10.y);
+                
+                // Check if the bottom gap (10,10) is filled
+                if (isConductive(10, 10)) {
+                    const pos10_10 = gridToWorld(10, 10);
+                    pathGraphics.lineTo(pos10_10.x, pos10_10.y);
+                    
+                    // Continue to bottom horizontal wires
+                    for (let x = 9; x >= 7; x--) {
+                        const pos = gridToWorld(x, 10);
+                        pathGraphics.lineTo(pos.x, pos.y);
+                    }
+                    
+                    // Continue to T-junction
+                    pathGraphics.lineTo(bottomTJunctionPos.x, bottomTJunctionPos.y);
+                }
+            }
         }
 
         // Short Circuit Detection System
@@ -4184,6 +4506,8 @@
                 return buildSecondCircuitPath();
             } else if (gameState.currentLayout === 'third') {
                 return buildThirdCircuitPath();
+            } else if (gameState.currentLayout === 'fourth') {
+                return buildFourthCircuitPath();
             } else {
                 return buildFirstCircuitPath();
             }
@@ -4459,6 +4783,118 @@
             path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
             
             console.log(`Third circuit path built with ${path.length} points`);
+            return path;
+        }
+
+        function buildFourthCircuitPath() {
+            if (!gameState.bulbs || gameState.bulbs.length < 2) {
+                console.log('Skipping buildFourthCircuitPath - no dual bulbs');
+                return [];
+            }
+            
+            const path = [];
+            
+            console.log('Building fourth circuit path (parallel circuit)...');
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Connection to L-shaped wire at (1,4)
+            const batteryLWirePos = gridToWorld(1, 4);
+            path.push({ x: batteryLWirePos.x, y: batteryLWirePos.y, isWire: true });
+            
+            // Top horizontal wire from battery toward first bulb
+            const pos2_4 = gridToWorld(2, 4);
+            path.push({ x: pos2_4.x, y: pos2_4.y, isWire: true });
+            
+            // Through the 2-cell gap (3,4)-(4,4) if filled
+            if (isConductive(3, 4) && isConductive(4, 4)) {
+                const pos3_4 = gridToWorld(3, 4);
+                const pos4_4 = gridToWorld(4, 4);
+                path.push({ x: pos3_4.x, y: pos3_4.y, isWire: true });
+                path.push({ x: pos4_4.x, y: pos4_4.y, isWire: true });
+            }
+            
+            // Continue to wire before T-junction
+            const pos5_4 = gridToWorld(5, 4);
+            path.push({ x: pos5_4.x, y: pos5_4.y, isWire: true });
+            
+            // Connection to T-junction at (6,4) and first bulb
+            const tJunctionPos = gridToWorld(6, 4);
+            path.push({ x: tJunctionPos.x, y: tJunctionPos.y, isWire: true });
+            
+            // Branch down to first bulb
+            const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
+            path.push({ x: bulb1CenterPos.x, y: bulb1CenterPos.y, isBulb: true });
+            
+            // Return path from first bulb to T-junction at (6,10)
+            const bottomTJunctionPos = gridToWorld(6, 10);
+            path.push({ x: bottomTJunctionPos.x, y: bottomTJunctionPos.y, isWire: true });
+            
+            // Bottom horizontal wire back to battery
+            for (let x = 5; x >= 1; x--) {
+                if (isConductive(x, 10)) {
+                    const pos = gridToWorld(x, 10);
+                    path.push({ x: pos.x, y: pos.y, isWire: true });
+                }
+            }
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            // If second bulb is also lit (all gaps filled), add its path
+            if (gameState.bulbs[1].isLit) {
+                // Second parallel path - start from T-junction at (5,4)
+                path.push({ x: tJunctionPos.x, y: tJunctionPos.y, isWire: true });
+                
+                // Continue top horizontal wire toward second bulb
+                const pos7_4 = gridToWorld(7, 4);
+                path.push({ x: pos7_4.x, y: pos7_4.y, isWire: true });
+                
+                // Through the 3-cell gap (8,4)-(10,4) if filled
+                if (isConductive(8, 4) && isConductive(9, 4) && isConductive(10, 4)) {
+                    for (let x = 8; x <= 11; x++) {
+                        if (isConductive(x, 4)) {
+                            const pos = gridToWorld(x, 4);
+                            path.push({ x: pos.x, y: pos.y, isWire: true });
+                        }
+                    }
+                    
+                    // Connection to L-shaped wire at (12,4)
+                    const pos12_4 = gridToWorld(12, 4);
+                    path.push({ x: pos12_4.x, y: pos12_4.y, isWire: true });
+                    
+                    // Connection to second bulb
+                    const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+                    path.push({ x: bulb2CenterPos.x, y: bulb2CenterPos.y, isBulb: true });
+                    
+                    // Return path from second bulb
+                    const pos12_10 = gridToWorld(12, 10);
+                    path.push({ x: pos12_10.x, y: pos12_10.y, isWire: true });
+                    
+                    const pos11_10 = gridToWorld(11, 10);
+                    path.push({ x: pos11_10.x, y: pos11_10.y, isWire: true });
+                    
+                    // Through bottom gap (10,10) if filled
+                    if (isConductive(10, 10)) {
+                        const pos10_10 = gridToWorld(10, 10);
+                        path.push({ x: pos10_10.x, y: pos10_10.y, isWire: true });
+                        
+                        // Continue to bottom horizontal wires
+                        for (let x = 9; x >= 7; x--) {
+                            const pos = gridToWorld(x, 10);
+                            path.push({ x: pos.x, y: pos.y, isWire: true });
+                        }
+                        
+                        // Back to bottom T-junction
+                        path.push({ x: bottomTJunctionPos.x, y: bottomTJunctionPos.y, isWire: true });
+                    }
+                }
+            }
+            
+            console.log(`Fourth circuit path built with ${path.length} points`);
             return path;
         }
 
@@ -4833,6 +5269,9 @@
                     case 'third':
                         stageTitle.textContent = 'Stage 3: Series Circuit';
                         break;
+                    case 'fourth':
+                        stageTitle.textContent = 'Stage 4: Parallel Circuit';
+                        break;
                     default:
                         stageTitle.textContent = 'Circuit Game';
                 }
@@ -4877,7 +5316,17 @@
                 });
                 successActions.appendChild(nextStageBtn);
             } else if (gameState.currentLayout === 'third') {
-                // Stage 3: Add educational completion message
+                // Stage 3: Add "Next Stage" button to go to Stage 4
+                const nextStageBtn = document.createElement('button');
+                nextStageBtn.id = 'next-stage-btn';
+                nextStageBtn.innerHTML = '➡️ Next Stage';
+                nextStageBtn.addEventListener('click', function() {
+                    hideSuccessModal();
+                    loadCircuitLayout('fourth');
+                });
+                successActions.appendChild(nextStageBtn);
+            } else if (gameState.currentLayout === 'fourth') {
+                // Stage 4: Add educational completion message
                 const completionBtn = document.createElement('button');
                 completionBtn.id = 'completion-btn';
                 completionBtn.innerHTML = '🎓 Well Done!';
@@ -4887,16 +5336,6 @@
                 });
                 successActions.appendChild(completionBtn);
             }
-            
-            // Always add New Challenge button (cycles through stages)
-            const newChallengeBtn = document.createElement('button');
-            newChallengeBtn.id = 'new-challenge-btn';
-            newChallengeBtn.innerHTML = '⚡ New Challenge';
-            newChallengeBtn.addEventListener('click', function() {
-                hideSuccessModal();
-                createNewChallenge();
-            });
-            successActions.appendChild(newChallengeBtn);
         }
 
         function showSuccessModal() {
@@ -4914,6 +5353,8 @@
                 stageTitle = '🎉 Excellent Work! - Stage 2 Complete';
             } else if (gameState.currentLayout === 'third') {
                 stageTitle = '🎉 Excellent Work! - Stage 3 Complete';
+            } else if (gameState.currentLayout === 'fourth') {
+                stageTitle = '🎉 Excellent Work! - Stage 4 Complete';
             }
             
             // Recreate the success modal content structure to ensure it exists
@@ -4972,8 +5413,8 @@
                     }
                 }
                 
-                // Add educational explanation (only for Stage 1, Stage 2 has its own section)
-                if (gameState.currentLayout !== 'second') {
+                // Add educational explanation (only for Stage 1, other stages have their own sections)
+                if (gameState.currentLayout === 'first') {
                     materialsHTML += `<p><strong>💡 What you learned:</strong> Conductors like metals allow electricity to flow, while insulators like rubber and wood block it. That's why the light bulb glows when you use conductive materials!</p>`;
                 }
             } else {
@@ -5020,6 +5461,33 @@
 
                         
                         <p style="margin-bottom: 0; color: #333; line-height: 1.4;"><strong>🔧 Key Lesson:</strong> All parts must work together for the circuit to function - just like teamwork!</p>
+                    </div>
+                `;
+            } else if (gameState.currentLayout === 'fourth') {
+                // Stage 4 educational content about parallel circuits
+                materialsHTML += `
+                    <div style="margin-top: 20px; padding: 15px; background-color: #E8F5E8; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                        <h4 style="color: #2E7D32; margin-bottom: 12px;">🎓 What You Learned About Parallel Circuits:</h4>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>⚡ What is a Parallel Circuit?</strong> A parallel circuit creates multiple paths for electricity to flow. Think of it like a river that splits into different streams - the water can flow through any or all of the paths!</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🔀 How it Works:</strong> Electricity can flow through multiple paths at the same time. If one path is blocked, electricity can still flow through the other paths, so some bulbs can stay lit even if others go out.</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>💡 Key Advantages:</strong></p>
+                        <ul style="margin: 5px 0 10px 20px; color: #333; line-height: 1.4;">
+                            <li>Each bulb can be controlled independently</li>
+                            <li>If one bulb burns out, the others keep working</li>
+                            <li>Each bulb gets the full voltage from the battery</li>
+                        </ul>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🏠 Real-World Examples:</strong></p>
+                        <ul style="margin: 5px 0 10px 20px; color: #333; line-height: 1.4;">
+                            <li>House lights (each room can be turned on/off separately)</li>
+                            <li>Car headlights (both work independently)</li>
+                            <li>Modern Christmas lights (one bulb out doesn't affect others)</li>
+                        </ul>
+                        
+                        <p style="margin-bottom: 0; color: #333; line-height: 1.4;"><strong>🔧 Key Lesson:</strong> Parallel circuits provide backup paths - if one route fails, electricity finds another way!</p>
                     </div>
                 `;
             }
