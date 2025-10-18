@@ -601,6 +601,13 @@
                         <div class="stage-description">Parallel Circuit</div>
                     </div>
                 </div>
+                <div class="stage-option" data-stage="fifth">
+                    <span class="stage-icon">🔀</span>
+                    <div class="stage-info">
+                        <div class="stage-title">Stage 5</div>
+                        <div class="stage-description">Series-Parallel Circuit</div>
+                    </div>
+                </div>
             </div>
             <div id="game-canvas"></div>
         </div>
@@ -917,6 +924,74 @@
                     { x: 11, y: 10 }, // H - Horizontal wire
                     { x: 12, y: 10 }  // L - L-shaped wire (second bulb connection)
                 ]
+            },
+            fifth: {
+                battery: { x: 1, y: 6, width: 1, height: 3 },  // B at (1,6), (1,7), (1,8) - shifted right by 1
+                bulbs: [
+                    { x: 5, y: 6, width: 3, height: 3, id: 'bulb1', isLit: false },  // Bulb 1 at (5,6) to (7,8) - left side
+                    { x: 8, y: 3, width: 3, height: 3, id: 'bulb2', isLit: false },   // Bulb 2 at (8,3) to (10,5) - top right (shifted up 1 cell)
+                    { x: 8, y: 9, width: 3, height: 3, id: 'bulb3', isLit: false }    // Bulb 3 at (8,9) to (10,11) - bottom right
+                ],
+                gaps: [
+                    // Top horizontal gaps: M M at (3,4)-(4,4) - shifted right by 1
+                    { x: 3, y: 4, filled: false, size: { width: 2, height: 1 } },
+                    // Bottom horizontal gap: M at (3,10) - 1-cell gap - shifted right by 1
+                    { x: 3, y: 10, filled: false, size: { width: 1, height: 1 } },
+                    // Vertical 3-slot gap: M M M at (12,6)-(12,8) - right side vertical - shifted right by 1
+                    { x: 12, y: 6, filled: false, size: { width: 1, height: 3 } }
+                ],
+                preplacedWires: [
+                    // Top horizontal wire (row 4): L H M M H T H O O O H L
+                    { x: 1, y: 4 },   // L - L-shaped wire (battery connection)
+                    { x: 2, y: 4 },   // H - Horizontal wire
+                    // Gap at (3,4)-(4,4) - M M
+                    { x: 5, y: 4 },   // H - Horizontal wire
+                    { x: 6, y: 4 },   // T - T-shaped wire (connects to bulb 1 and continues right)
+                    { x: 7, y: 4 },   // H - Horizontal wire
+                    { x: 8, y: 4 },   // H - Horizontal wire (under bulb 2)
+                    { x: 9, y: 4 },   // H - Horizontal wire (under bulb 2)
+                    { x: 10, y: 4 },  // H - Horizontal wire (under bulb 2)
+                    { x: 11, y: 4 },  // H - Horizontal wire
+                    { x: 12, y: 4 },  // L - L-shaped wire (connects to vertical gap)
+                    
+                    // Vertical connections for battery
+                    { x: 1, y: 5 },   // V - Vertical wire (battery connection)
+                    { x: 1, y: 9 },   // V - Vertical wire (battery connection)
+                    
+                    // Vertical connections for T-junction at (6,4) - connects to bulb 1
+                    { x: 6, y: 5 },   // V - Vertical wire (connects to bulb 1)
+                    { x: 6, y: 6 },   // V - Vertical wire (connects to bulb 1)
+                    { x: 6, y: 7 },   // V - Vertical wire (connects to bulb 1)
+                    { x: 6, y: 8 },   // V - Vertical wire (connects to bulb 1)
+                    { x: 6, y: 9 },   // V - Vertical wire (connects to bulb 1)
+                    { x: 6, y: 10 },  // T - T-shaped wire at bottom
+                    
+                    // Vertical connections for bulb 2 area (shifted up)
+                    { x: 9, y: 3 },   // V - Vertical wire (connects to bulb 2 - shifted up)
+                    
+                    // Vertical connections for bulb 3 area
+                    { x: 9, y: 9 },   // V - Vertical wire (connects from bulb 3)
+                    { x: 9, y: 11 },  // V - Vertical wire (connects to bulb 3)
+                    
+                    // Vertical connections for vertical gap area
+                    { x: 12, y: 5 },  // V - Vertical wire (before vertical gap)
+                    // Gap at (12,6)-(12,8) - M M M vertical
+                    { x: 12, y: 9 },  // V - Vertical wire (after vertical gap)
+                    
+                    // Bottom horizontal wire (row 10): L H M H H T H O O O H L
+                    { x: 1, y: 10 },  // L - L-shaped wire (battery connection)
+                    { x: 2, y: 10 },  // H - Horizontal wire
+                    // Gap at (3,10) - M
+                    { x: 4, y: 10 },  // H - Horizontal wire
+                    { x: 5, y: 10 },  // H - Horizontal wire
+                    // T-junction at (6,10) handled above
+                    { x: 7, y: 10 },  // H - Horizontal wire
+                    { x: 8, y: 10 },  // H - Horizontal wire (under bulb 3)
+                    { x: 9, y: 10 },  // H - Horizontal wire (under bulb 3)
+                    { x: 10, y: 10 }, // H - Horizontal wire (under bulb 3)
+                    { x: 11, y: 10 }, // H - Horizontal wire
+                    { x: 12, y: 10 }  // L - L-shaped wire (connects to vertical gap)
+                ]
             }
         };
 
@@ -1170,6 +1245,11 @@
                 if ((x === 6 && y === 4) || (x === 6 && y === 10)) {
                     return 'T-shaped';
                 }
+            } else if (gameState.currentLayout === 'fifth') {
+                // Specific T-junction positions in the fifth layout
+                if ((x === 6 && y === 4) || (x === 6 && y === 10)) {
+                    return 'T-shaped';
+                }
             }
             
             // Check for L-shaped junctions (corner connections)
@@ -1280,6 +1360,12 @@
                 // Fourth circuit: Vertical wires at (1,5), (1,9), (6,5), (6,9), (12,5), (12,9)
                 return (x === 1 && (y === 5 || y === 9)) || 
                        (x === 6 && (y === 5 || y === 9)) || 
+                       (x === 12 && (y === 5 || y === 9));
+            } else if (gameState.currentLayout === 'fifth') {
+                // Fifth circuit: Vertical wires for new bulb positions
+                return (x === 1 && (y === 5 || y === 9)) || 
+                       (x === 6 && (y >= 5 && y <= 10)) || 
+                       (x === 9 && (y === 3 || y === 9 || y === 11)) ||
                        (x === 12 && (y === 5 || y === 9));
             }
             return false;
@@ -1454,6 +1540,49 @@
                     group.add(verticalWire);
                 } else if (x === 12 && y === 10) {
                     // Second bulb bottom L-wire: connects left and up
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                }
+            } else if (gameState.currentLayout === 'fifth') {
+                // Fifth circuit L-wire positions - shifted right by 1
+                if (x === 1 && y === 4) {
+                    // Battery top L-wire: connects right and down
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 1 && y === 10) {
+                    // Battery bottom L-wire: connects right and up
+                    const horizontalWire = scene.add.rectangle(pos.x + halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 4) {
+                    // Right side top L-wire: connects left and down
+                    const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
+                    const verticalWire = scene.add.rectangle(pos.x, pos.y + halfCell/2, wireThickness, halfCell, 0xCD7F32);
+                    horizontalWire.setStrokeStyle(1, 0x8B4513);
+                    verticalWire.setStrokeStyle(1, 0x8B4513);
+                    horizontalWire.setDepth(5);
+                    verticalWire.setDepth(5);
+                    group.add(horizontalWire);
+                    group.add(verticalWire);
+                } else if (x === 12 && y === 10) {
+                    // Right side bottom L-wire: connects left and up
                     const horizontalWire = scene.add.rectangle(pos.x - halfCell/2, pos.y, halfCell, wireThickness, 0xCD7F32);
                     const verticalWire = scene.add.rectangle(pos.x, pos.y - halfCell/2, wireThickness, halfCell, 0xCD7F32);
                     horizontalWire.setStrokeStyle(1, 0x8B4513);
@@ -1790,8 +1919,22 @@
                 }
             ];
             
+            // Sort items by ascending cell size (width * height), then by name for consistent ordering
+            const sortedItemDefinitions = itemDefinitions.sort((a, b) => {
+                const aCellCount = a.size.width * a.size.height;
+                const bCellCount = b.size.width * b.size.height;
+                
+                // First sort by cell count
+                if (aCellCount !== bCellCount) {
+                    return aCellCount - bCellCount;
+                }
+                
+                // If same cell count, sort alphabetically by name for consistent ordering
+                return a.name.localeCompare(b.name);
+            });
+            
             // Create item bank items
-            itemDefinitions.forEach(itemDef => {
+            sortedItemDefinitions.forEach(itemDef => {
                 for (let i = 0; i < itemDef.quantity; i++) {
                     const item = createBankItem(itemDef, i);
                     gameState.itemBank.push(item);
@@ -3322,6 +3465,9 @@
             } else if (gameState.currentLayout === 'fourth') {
                 // Stage 4: Bulbs are already updated in findFourthCircuitPath
                 // No additional update needed here
+            } else if (gameState.currentLayout === 'fifth') {
+                // Stage 5: Bulbs are already updated in findFifthCircuitPath
+                // No additional update needed here
             } else {
                 // Stage 1 & 2: Update single bulb
                 updateLightBulb(hasCompletePath);
@@ -3356,6 +3502,9 @@
             } else if (gameState.currentLayout === 'fourth') {
                 // Fourth circuit layout with parallel dual bulbs
                 return findFourthCircuitPath();
+            } else if (gameState.currentLayout === 'fifth') {
+                // Fifth circuit layout with series-parallel dual bulbs
+                return findFifthCircuitPath();
             } else {
                 // First circuit layout (original)
                 return findFirstCircuitPath();
@@ -3698,6 +3847,83 @@
             return allBulbsLit;
         }
 
+        function findFifthCircuitPath() {
+            // Stage 5: Series-Parallel circuit with 3 bulbs
+            // Circuit logic:
+            // - Bulb 1 at (5,6): lights when 2-cell gap (3,4)-(4,4) AND 1-cell gap (3,10) are filled (series connection)
+            // - Bulbs 2 and 3: light when ALL gaps are filled with conductors (requires complete circuit)
+            console.log('Checking Stage 5 series-parallel circuit path...');
+            
+            // Check if all gaps are filled with conductors for a complete circuit
+            const allGapsConductors = gameState.gaps.every(gap => {
+                // For multi-cell gaps, check all cells in the gap
+                for (let dx = 0; dx < gap.size.width; dx++) {
+                    for (let dy = 0; dy < gap.size.height; dy++) {
+                        const item = getGridPosition(gap.x + dx, gap.y + dy);
+                        if (!item || !item.conductive) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            });
+            
+            // Check individual bulb paths
+            // Bulb 1 at (5,6): needs 2-cell gap (3,4)-(4,4) AND 1-cell gap (3,10) filled (series connection)
+            const gap2Cell = gameState.gaps.find(gap => gap.x === 3 && gap.y === 4);
+            const gap1CellBottom = gameState.gaps.find(gap => gap.x === 3 && gap.y === 10);
+            let bulb1ShouldLight = false;
+            
+            if (gap2Cell && gap1CellBottom) {
+                const gap2CellFilled = isConductive(3, 4) && isConductive(4, 4);
+                const gap1CellBottomFilled = isConductive(3, 10);
+                
+                if (gap2CellFilled && gap1CellBottomFilled) {
+                    console.log('Bulb 1 path complete - 2-cell gap and bottom 1-cell gap filled with conductors');
+                    bulb1ShouldLight = true;
+                }
+            }
+            
+            // Bulbs 2 and 3: only light when ALL gaps are filled (complete circuit)
+            let bulbs2And3ShouldLight = false;
+            if (allGapsConductors) {
+                console.log('Complete circuit - all gaps filled with conductors, bulbs 2 and 3 should light');
+                bulbs2And3ShouldLight = true;
+            }
+            
+            // Update bulb states
+            if (gameState.bulbs) {
+                // Bulb 1 at (5,6) - can light independently
+                if (gameState.bulbs[0]) {
+                    gameState.bulbs[0].isLit = bulb1ShouldLight;
+                    if (gameState.bulbs[0].bulbSprite && gameState.bulbs[0].bulbSprite.setFrame) {
+                        gameState.bulbs[0].bulbSprite.setFrame(bulb1ShouldLight ? 1 : 0);
+                    }
+                }
+                
+                // Bulb 2 at (8,4) - only lights when all gaps filled
+                if (gameState.bulbs[1]) {
+                    gameState.bulbs[1].isLit = bulbs2And3ShouldLight;
+                    if (gameState.bulbs[1].bulbSprite && gameState.bulbs[1].bulbSprite.setFrame) {
+                        gameState.bulbs[1].bulbSprite.setFrame(bulbs2And3ShouldLight ? 1 : 0);
+                    }
+                }
+                
+                // Bulb 3 at (8,9) - only lights when all gaps filled
+                if (gameState.bulbs[2]) {
+                    gameState.bulbs[2].isLit = bulbs2And3ShouldLight;
+                    if (gameState.bulbs[2].bulbSprite && gameState.bulbs[2].bulbSprite.setFrame) {
+                        gameState.bulbs[2].bulbSprite.setFrame(bulbs2And3ShouldLight ? 1 : 0);
+                    }
+                }
+            }
+            
+            // Return true only if ALL bulbs are lit (for success modal)
+            const allBulbsLit = bulb1ShouldLight && bulbs2And3ShouldLight;
+            console.log(`Stage 5 evaluation: bulb1=${bulb1ShouldLight}, bulbs2And3=${bulbs2And3ShouldLight}, allLit=${allBulbsLit}`);
+            return allBulbsLit;
+        }
+
         // Visual Connection System Functions
         function updateWireConnections() {
             console.log('Updating wire connections...');
@@ -3846,6 +4072,8 @@
                 drawThirdCircuitPath(pathGraphics);
             } else if (gameState.currentLayout === 'fourth') {
                 drawFourthCircuitPath(pathGraphics);
+            } else if (gameState.currentLayout === 'fifth') {
+                drawFifthCircuitPath(pathGraphics);
             }
             
             pathGraphics.strokePath();
@@ -4236,6 +4464,150 @@
             }
         }
 
+        function drawFifthCircuitPath(pathGraphics) {
+            // Fifth circuit path for series-parallel circuit with 3 bulbs
+            if (!gameState.bulbs || gameState.bulbs.length < 3) {
+                console.log('Skipping drawFifthCircuitPath - need 3 bulbs');
+                return;
+            }
+            
+            // Draw path for bulb 1 (left bulb) if it's lit
+            if (gameState.bulbs[0].isLit) {
+                // Start from battery positive terminal
+                const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+                pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
+                
+                // Path to bulb 1: battery → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → bulb1
+                const positions = [
+                    [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4]
+                ];
+                
+                positions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                // Branch down to bulb 1
+                const pos6_5 = gridToWorld(6, 5);
+                pathGraphics.lineTo(pos6_5.x, pos6_5.y);
+                
+                const pos6_6 = gridToWorld(6, 6);
+                pathGraphics.lineTo(pos6_6.x, pos6_6.y);
+                
+                const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
+                pathGraphics.lineTo(bulb1CenterPos.x, bulb1CenterPos.y);
+                
+                // Return path from bulb 1
+                const pos6_8 = gridToWorld(6, 8);
+                pathGraphics.lineTo(pos6_8.x, pos6_8.y);
+                
+                const pos6_9 = gridToWorld(6, 9);
+                pathGraphics.lineTo(pos6_9.x, pos6_9.y);
+                
+                const pos6_10 = gridToWorld(6, 10);
+                pathGraphics.lineTo(pos6_10.x, pos6_10.y);
+                
+                // Bottom path back to battery through 1-cell gap
+                const returnPositions = [
+                    [5, 10], [4, 10], [3, 10], [2, 10], [1, 10]
+                ];
+                
+                returnPositions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                // Connect to battery negative terminal
+                const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+                pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
+            }
+            
+            // Draw path for bulbs 2 and 3 (right bulbs) if they're lit
+            if (gameState.bulbs[1].isLit && gameState.bulbs[2].isLit) {
+                // Start from battery positive terminal
+                const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+                pathGraphics.moveTo(batteryTopPos.x, batteryTopPos.y - gameState.cellSize * 0.5);
+                
+                // Path through top wire: battery → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (7,4) → (8,4) → (9,4)
+                const topPositions = [
+                    [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [8, 4], [9, 4]
+                ];
+                
+                topPositions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                // Branch up to bulb 2 (top right - shifted up to y=3)
+                const pos9_3 = gridToWorld(9, 3);
+                pathGraphics.lineTo(pos9_3.x, pos9_3.y);
+                
+                const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+                pathGraphics.lineTo(bulb2CenterPos.x, bulb2CenterPos.y);
+                
+                // Return to main path at (9,4) and continue right
+                pathGraphics.moveTo(gridToWorld(9, 4).x, gridToWorld(9, 4).y);
+                
+                // Continue to right side
+                const rightPositions = [
+                    [10, 4], [11, 4], [12, 4]
+                ];
+                
+                rightPositions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                // Down through vertical gap
+                const pos12_5 = gridToWorld(12, 5);
+                pathGraphics.lineTo(pos12_5.x, pos12_5.y);
+                
+                // Through vertical 3-cell gap (12,6)-(12,8)
+                const verticalPositions = [
+                    [12, 6], [12, 7], [12, 8]
+                ];
+                
+                verticalPositions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                const pos12_9 = gridToWorld(12, 9);
+                pathGraphics.lineTo(pos12_9.x, pos12_9.y);
+                
+                const pos12_10 = gridToWorld(12, 10);
+                pathGraphics.lineTo(pos12_10.x, pos12_10.y);
+                
+                // Back through bottom wire
+                const bottomRightPositions = [
+                    [11, 10], [10, 10]
+                ];
+                
+                bottomRightPositions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                // Through bulb 3 (bottom right)
+                const bulb3CenterPos = gridToWorld(gameState.bulbs[2].x + 1, gameState.bulbs[2].y + 1);
+                pathGraphics.lineTo(bulb3CenterPos.x, bulb3CenterPos.y);
+                
+                // Continue back to battery
+                const bottomLeftPositions = [
+                    [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10]
+                ];
+                
+                bottomLeftPositions.forEach(([x, y]) => {
+                    const pos = gridToWorld(x, y);
+                    pathGraphics.lineTo(pos.x, pos.y);
+                });
+                
+                // Connect to battery negative terminal
+                const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+                pathGraphics.lineTo(batteryBottomPos.x, batteryBottomPos.y + gameState.cellSize * 0.5);
+            }
+        }
+
         // Short Circuit Detection System
         function detectShortCircuit() {
             // Only check for short circuits in Stage 2 (second layout)
@@ -4496,77 +4868,120 @@
             const targetSpacing = gameState.cellSize * 3;
             console.log(`Target spacing set to: ${targetSpacing} pixels (3 cells of ${gameState.cellSize}px each)`);
             
-            // Handle stage 4 differently - create separate particles for each bulb path
-            if (gameState.currentLayout === 'fourth') {
-                console.log('Creating separate particle sets for stage 4 parallel circuit');
+            // Handle stage 4 and 5 differently - create particles for each bulb path with smart spacing
+            if (gameState.currentLayout === 'fourth' || gameState.currentLayout === 'fifth') {
+                console.log('Creating particles for stage 4/5 parallel circuit with smart spacing');
                 console.log('Bulb states:', gameState.bulbs ? gameState.bulbs.map(b => ({id: b.id, isLit: b.isLit})) : 'no bulbs');
                 
-                // Get individual paths for each bulb
-                const leftBulbPath = buildLeftBulbPath();
-                const rightBulbPath = buildRightBulbPath();
-                console.log('Path lengths - left:', leftBulbPath.length, 'right:', rightBulbPath.length);
+                // Get individual paths for each bulb based on current stage
+                let leftBulbPath = [];
+                let rightBulbPath = [];
+                let thirdBulbPath = [];
                 
-                // Create particles for left bulb path if it's lit
+                if (gameState.currentLayout === 'fourth') {
+                    leftBulbPath = buildLeftBulbPath();
+                    rightBulbPath = buildRightBulbPath();
+                } else if (gameState.currentLayout === 'fifth') {
+                    leftBulbPath = buildFifthLeftBulbPath();
+                    rightBulbPath = buildFifthRightBulbPath();
+                    thirdBulbPath = buildFifthThirdBulbPath();
+                }
+                
+                console.log('Path lengths - left:', leftBulbPath.length, 'right:', rightBulbPath.length, 'third:', thirdBulbPath.length);
+                
+                // Create particles with slightly reduced spacing to fit 2 additional particles
+                const baseSpacing = gameState.cellSize * 2.7; // Slightly less than 3 cells to fit more particles
+                
+                // Collect all lit bulb paths
+                const litPaths = [];
                 if (gameState.bulbs && gameState.bulbs[0] && gameState.bulbs[0].isLit && leftBulbPath.length > 0) {
-                    const leftParticlePositions = calculateEvenlySpacedPositions(leftBulbPath, targetSpacing);
-                    console.log(`Left bulb path length: ${leftBulbPath.length}, particles: ${leftParticlePositions.length}`);
+                    litPaths.push({ path: leftBulbPath, type: 'left' });
+                }
+                if (gameState.bulbs && gameState.bulbs[1] && gameState.bulbs[1].isLit && rightBulbPath.length > 0) {
+                    litPaths.push({ path: rightBulbPath, type: 'right' });
+                }
+                if (gameState.currentLayout === 'fifth' && gameState.bulbs && gameState.bulbs[2] && gameState.bulbs[2].isLit && thirdBulbPath.length > 0) {
+                    litPaths.push({ path: thirdBulbPath, type: 'third' });
+                }
+                
+                // Enhanced particle placement to fit more particles with equal spacing
+                const globalParticles = [];
+                const minDistance = baseSpacing;
+                
+                // First pass: collect all potential particle positions from all paths with denser spacing
+                const allPotentialPositions = [];
+                litPaths.forEach(({ path, type }) => {
+                    const pathPositions = calculateEvenlySpacedPositions(path, baseSpacing);
+                    pathPositions.forEach(pos => {
+                        allPotentialPositions.push({
+                            ...pos,
+                            pathType: type,
+                            circuitPath: path
+                        });
+                    });
+                });
+                
+                // Sort potential positions by path type to ensure balanced distribution
+                allPotentialPositions.sort((a, b) => {
+                    if (a.pathType !== b.pathType) {
+                        return a.pathType.localeCompare(b.pathType);
+                    }
+                    return a.pathIndex - b.pathIndex;
+                });
+                
+                console.log(`Total potential positions: ${allPotentialPositions.length}`);
+                
+                // Second pass: select positions that maintain minimum distance, with priority for balanced distribution
+                let targetParticleCount = Math.min(allPotentialPositions.length, 12); // Target 2 more than typical
+                let placedCount = 0;
+                
+                for (let i = 0; i < allPotentialPositions.length && placedCount < targetParticleCount; i++) {
+                    const candidate = allPotentialPositions[i];
+                    let canPlace = true;
                     
-                    for (let i = 0; i < leftParticlePositions.length; i++) {
-                        const startPosition = leftParticlePositions[i];
+                    // Check distance from all already placed particles
+                    for (let placed of globalParticles) {
+                        const distance = Math.sqrt(
+                            Math.pow(candidate.x - placed.x, 2) + 
+                            Math.pow(candidate.y - placed.y, 2)
+                        );
+                        
+                        if (distance < minDistance) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canPlace) {
+                        globalParticles.push(candidate);
+                        placedCount++;
                         
                         const particleColor = isShortCircuit ? 0xFF0000 : 0xFFFF00;
-                        const particle = scene.add.circle(startPosition.x, startPosition.y, 6, particleColor);
+                        const particle = scene.add.circle(candidate.x, candidate.y, 6, particleColor);
                         particle.setAlpha(1.0);
                         particle.setDepth(8);
-                        particle.active = true; // Set active property for animation
+                        particle.active = true;
                         
-                        const glow = scene.add.circle(startPosition.x, startPosition.y, 12, particleColor);
+                        const glow = scene.add.circle(candidate.x, candidate.y, 12, particleColor);
                         glow.setAlpha(0.4);
                         glow.setDepth(7);
-                        glow.active = true; // Set active property for animation
+                        glow.active = true;
                         
                         particles.push({ 
                             particle, 
                             glow, 
-                            startIndex: startPosition.pathIndex,
-                            particleIndex: i,
-                            pathType: 'left',
-                            circuitPath: leftBulbPath
+                            startIndex: candidate.pathIndex,
+                            particleIndex: globalParticles.length - 1,
+                            pathType: candidate.pathType,
+                            circuitPath: candidate.circuitPath
                         });
                         gameState.flowVisualization.push(particle, glow);
+                        
+                        console.log(`Placed ${candidate.pathType} particle ${placedCount}/${targetParticleCount} at (${Math.round(candidate.x)}, ${Math.round(candidate.y)})`);
                     }
                 }
                 
-                // Create particles for right bulb path if it's lit
-                if (gameState.bulbs && gameState.bulbs[1] && gameState.bulbs[1].isLit && rightBulbPath.length > 0) {
-                    const rightParticlePositions = calculateEvenlySpacedPositions(rightBulbPath, targetSpacing);
-                    console.log(`Right bulb path length: ${rightBulbPath.length}, particles: ${rightParticlePositions.length}`);
-                    
-                    for (let i = 0; i < rightParticlePositions.length; i++) {
-                        const startPosition = rightParticlePositions[i];
-                        
-                        const particleColor = isShortCircuit ? 0xFF0000 : 0xFFFF00;
-                        const particle = scene.add.circle(startPosition.x, startPosition.y, 6, particleColor);
-                        particle.setAlpha(1.0);
-                        particle.setDepth(8);
-                        particle.active = true; // Set active property for animation
-                        
-                        const glow = scene.add.circle(startPosition.x, startPosition.y, 12, particleColor);
-                        glow.setAlpha(0.4);
-                        glow.setDepth(7);
-                        glow.active = true; // Set active property for animation
-                        
-                        particles.push({ 
-                            particle, 
-                            glow, 
-                            startIndex: startPosition.pathIndex,
-                            particleIndex: i,
-                            pathType: 'right',
-                            circuitPath: rightBulbPath
-                        });
-                        gameState.flowVisualization.push(particle, glow);
-                    }
-                }
+                console.log(`Total particles created: ${particles.length} with smart offset spacing`)
             } else {
                 // Original logic for other stages using even spacing
                 const particlePositions = calculateEvenlySpacedPositions(circuitPath, targetSpacing);
@@ -4634,47 +5049,29 @@
             const targetSpacingPixels = gameState.cellSize * 3;
             console.log(`Target spacing: ${targetSpacingPixels} pixels (3 cells)`);
             
-            // Calculate optimal number of charges that fit with equal spacing
-            const numCharges = Math.max(2, Math.floor(totalPathLength / targetSpacingPixels) + 1);
-            const actualSpacing = totalPathLength / (numCharges - 1);
-            
-            console.log(`Placing ${numCharges} charges with equal spacing of ${Math.round(actualSpacing)} pixels (${Math.round(actualSpacing / gameState.cellSize * 10) / 10} cells)`);
+            // Calculate number of charges that fit with proper 3-cell spacing
+            const numCharges = Math.max(1, Math.floor(totalPathLength / targetSpacingPixels));
+            console.log(`Placing ${numCharges} charges with 3-cell spacing (${targetSpacingPixels}px)`);
             
             const positions = [];
             
-            // Place charges at perfectly equal intervals with validation
+            // Place charges at exact 3-cell intervals
             for (let i = 0; i < numCharges; i++) {
-                const distance = i * actualSpacing;
+                const distance = i * targetSpacingPixels;
+                
+                // Don't place if we exceed the path length
+                if (distance >= totalPathLength) break;
+                
                 const position = getPositionAtDistance(path, distance);
                 
                 if (position) {
-                    // Validate minimum spacing from all previously placed charges
-                    let tooClose = false;
-                    const minSpacing = gameState.cellSize * 2.8; // Slightly less than 3 cells for tolerance
+                    positions.push({
+                        x: position.x,
+                        y: position.y,
+                        pathIndex: distance / totalPathLength * (path.length - 1)
+                    });
                     
-                    for (let j = 0; j < positions.length; j++) {
-                        const existingPos = positions[j];
-                        const actualDistance = Math.sqrt(
-                            Math.pow(position.x - existingPos.x, 2) + 
-                            Math.pow(position.y - existingPos.y, 2)
-                        );
-                        
-                        if (actualDistance < minSpacing) {
-                            tooClose = true;
-                            console.log(`Skipped charge ${i + 1} at distance ${Math.round(distance)} - too close to charge ${j + 1}: ${Math.round(actualDistance / gameState.cellSize * 10) / 10} cells < 2.8 cells`);
-                            break;
-                        }
-                    }
-                    
-                    if (!tooClose) {
-                        positions.push({
-                            x: position.x,
-                            y: position.y,
-                            pathIndex: distance / totalPathLength * (path.length - 1)
-                        });
-                        
-                        console.log(`Placed charge ${positions.length} at distance ${Math.round(distance)} = pixel (${Math.round(position.x)}, ${Math.round(position.y)})`);
-                    }
+                    console.log(`Placed charge ${positions.length} at distance ${Math.round(distance)}px = (${Math.round(position.x)}, ${Math.round(position.y)})`);
                 }
             }
             
@@ -4708,6 +5105,8 @@
                 return buildThirdCircuitPath();
             } else if (gameState.currentLayout === 'fourth') {
                 return buildFourthCircuitPath();
+            } else if (gameState.currentLayout === 'fifth') {
+                return buildFifthCircuitPath();
             } else {
                 return buildFirstCircuitPath();
             }
@@ -5253,6 +5652,250 @@
             return path;
         }
 
+        function buildFifthCircuitPath() {
+            if (!gameState.bulbs || gameState.bulbs.length < 3) {
+                console.log('Skipping buildFifthCircuitPath - need 3 bulbs');
+                return [];
+            }
+            
+            const paths = [];
+            
+            console.log('Building fifth circuit path (series-parallel circuit with 3 bulbs)...');
+            
+            // Create separate path for left bulb (bulb1)
+            if (gameState.bulbs[0].isLit) {
+                const leftBulbPath = buildFifthLeftBulbPath();
+                if (leftBulbPath.length > 0) {
+                    paths.push(...leftBulbPath);
+                }
+            }
+            
+            // Create separate path for right bulb (bulb2)
+            if (gameState.bulbs[1].isLit) {
+                const rightBulbPath = buildFifthRightBulbPath();
+                if (rightBulbPath.length > 0) {
+                    paths.push(...rightBulbPath);
+                }
+            }
+            
+            // Create separate path for third bulb (bulb3)
+            if (gameState.bulbs[2].isLit) {
+                const thirdBulbPath = buildFifthThirdBulbPath();
+                if (thirdBulbPath.length > 0) {
+                    paths.push(...thirdBulbPath);
+                }
+            }
+            
+            console.log(`Fifth circuit path built with ${paths.length} points`);
+            return paths;
+        }
+
+        function buildFifthLeftBulbPath() {
+            const path = [];
+            
+            // Only build path if left bulb is actually lit and required gaps are filled
+            if (!gameState.bulbs || !gameState.bulbs[0] || !gameState.bulbs[0].isLit) {
+                console.log('Left bulb path not built - bulb not lit');
+                return path;
+            }
+            
+            // Check if left bulb path is complete (2-cell gap and bottom 1-cell gap filled)
+            const gap2CellFilled = isConductive(3, 4) && isConductive(4, 4);
+            const gap1CellBottomFilled = isConductive(3, 10);
+            console.log(`Left bulb path check - gap2CellFilled: ${gap2CellFilled}, gap1CellBottomFilled: ${gap1CellBottomFilled}`);
+            
+            if (!gap2CellFilled || !gap1CellBottomFilled) {
+                console.log('Left bulb path not built - required gaps not filled');
+                return path;
+            }
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Path: battery → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (6,5) → (6,6) → bulb1 → (6,8) → (6,9) → (6,10) → back to battery
+            const positions = [
+                [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4]
+            ];
+            
+            positions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // Branch down to bulb 1 at (5,6)
+            const pos6_5 = gridToWorld(6, 5);
+            path.push({ x: pos6_5.x, y: pos6_5.y, isWire: true });
+            
+            const pos6_6 = gridToWorld(6, 6);
+            path.push({ x: pos6_6.x, y: pos6_6.y, isWire: true });
+            
+            const bulb1CenterPos = gridToWorld(gameState.bulbs[0].x + 1, gameState.bulbs[0].y + 1);
+            path.push({ x: bulb1CenterPos.x, y: bulb1CenterPos.y, isBulb: true });
+            
+            // Return path from bulb 1
+            const pos6_8 = gridToWorld(6, 8);
+            path.push({ x: pos6_8.x, y: pos6_8.y, isWire: true });
+            
+            const pos6_9 = gridToWorld(6, 9);
+            path.push({ x: pos6_9.x, y: pos6_9.y, isWire: true });
+            
+            const pos6_10 = gridToWorld(6, 10);
+            path.push({ x: pos6_10.x, y: pos6_10.y, isWire: true });
+            
+            // Back to battery through bottom wire and 1-cell gap
+            const returnPositions = [
+                [5, 10], [4, 10], [3, 10], [2, 10], [1, 10]
+            ];
+            
+            returnPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            console.log(`Fifth left bulb path built with ${path.length} points`);
+            return path;
+        }
+
+        function buildFifthRightBulbPath() {
+            const path = [];
+            
+            // Only build path for bulb 2 (top right) if it's lit
+            if (!gameState.bulbs || !gameState.bulbs[1] || !gameState.bulbs[1].isLit) {
+                console.log('Bulb 2 path not built - bulb not lit');
+                return path;
+            }
+            
+            // Check if all gaps are filled (required for bulbs 2 and 3)
+            const gap2CellFilled = isConductive(3, 4) && isConductive(4, 4);
+            const gap1CellFilled = isConductive(3, 10);
+            const gap3CellVerticalFilled = isConductive(12, 6) && isConductive(12, 7) && isConductive(12, 8);
+            
+            if (!gap2CellFilled || !gap1CellFilled || !gap3CellVerticalFilled) {
+                console.log('Bulb 2 path not built - not all gaps filled');
+                return path;
+            }
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Path to bulb 2: battery → (1,4) → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (7,4) → (8,4) → (9,4) → (9,3) → bulb2
+            const topPositions = [
+                [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [8, 4], [9, 4]
+            ];
+            
+            topPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // Branch up to bulb 2 (top right at 8,3)
+            const pos9_3 = gridToWorld(9, 3);
+            path.push({ x: pos9_3.x, y: pos9_3.y, isWire: true });
+            
+            const bulb2CenterPos = gridToWorld(gameState.bulbs[1].x + 1, gameState.bulbs[1].y + 1);
+            path.push({ x: bulb2CenterPos.x, y: bulb2CenterPos.y, isBulb: true });
+            
+            // Return path: bulb2 → (9,3) → (9,4) → (10,4) → (11,4) → (12,4) → (12,5) → through vertical gap → (12,9) → (12,10) → back to battery
+            path.push({ x: pos9_3.x, y: pos9_3.y, isWire: true });
+            
+            const returnPositions = [
+                [9, 4], [10, 4], [11, 4], [12, 4], [12, 5], [12, 6], [12, 7], [12, 8], [12, 9], [12, 10],
+                [11, 10], [10, 10], [9, 10], [8, 10], [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10]
+            ];
+            
+            returnPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            console.log(`Fifth bulb 2 path built with ${path.length} points`);
+            return path;
+        }
+
+        function buildFifthThirdBulbPath() {
+            const path = [];
+            
+            // Only build path for bulb 3 (bottom right) if it's lit
+            if (!gameState.bulbs || !gameState.bulbs[2] || !gameState.bulbs[2].isLit) {
+                console.log('Bulb 3 path not built - bulb not lit');
+                return path;
+            }
+            
+            // Check if all gaps are filled (required for bulbs 2 and 3)
+            const gap2CellFilled = isConductive(3, 4) && isConductive(4, 4);
+            const gap1CellFilled = isConductive(3, 10);
+            const gap3CellVerticalFilled = isConductive(12, 6) && isConductive(12, 7) && isConductive(12, 8);
+            
+            if (!gap2CellFilled || !gap1CellFilled || !gap3CellVerticalFilled) {
+                console.log('Bulb 3 path not built - not all gaps filled');
+                return path;
+            }
+            
+            // Start at battery positive terminal (top cell)
+            const batteryTopPos = gridToWorld(gameState.battery.x, gameState.battery.y);
+            path.push({ x: batteryTopPos.x, y: batteryTopPos.y - gameState.cellSize * 0.5, isTerminal: true });
+            
+            // Path to bulb 3: battery → top wire → right side → through vertical gap → bulb3
+            const topPositions = [
+                [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [8, 4], [9, 4], [10, 4], [11, 4], [12, 4]
+            ];
+            
+            topPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // Down the right side through vertical gap
+            const rightVerticalPositions = [
+                [12, 5], [12, 6], [12, 7], [12, 8], [12, 9], [12, 10]
+            ];
+            
+            rightVerticalPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // To bulb 3 (bottom right at 8,9)
+            const bottomRightPositions = [
+                [11, 10], [10, 10]
+            ];
+            
+            bottomRightPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            const bulb3CenterPos = gridToWorld(gameState.bulbs[2].x + 1, gameState.bulbs[2].y + 1);
+            path.push({ x: bulb3CenterPos.x, y: bulb3CenterPos.y, isBulb: true });
+            
+            // Return path: bulb3 → back to battery
+            const bottomLeftPositions = [
+                [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10]
+            ];
+            
+            bottomLeftPositions.forEach(([x, y]) => {
+                const pos = gridToWorld(x, y);
+                path.push({ x: pos.x, y: pos.y, isWire: true });
+            });
+            
+            // Battery negative terminal (bottom cell)
+            const batteryBottomPos = gridToWorld(gameState.battery.x, gameState.battery.y + 2);
+            path.push({ x: batteryBottomPos.x, y: batteryBottomPos.y + gameState.cellSize * 0.5, isTerminal: true });
+            
+            console.log(`Fifth bulb 3 path built with ${path.length} points`);
+            return path;
+        }
+
         function calculatePathDistance(path) {
             let totalDistance = 0;
             
@@ -5266,6 +5909,18 @@
             }
             
             return totalDistance;
+        }
+
+        function calculatePathLength(path) {
+            let totalLength = 0;
+            for (let i = 1; i < path.length; i++) {
+                const prev = path[i - 1];
+                const curr = path[i];
+                totalLength += Math.sqrt(
+                    Math.pow(curr.x - prev.x, 2) + Math.pow(curr.y - prev.y, 2)
+                );
+            }
+            return totalLength;
         }
 
         function getPositionAtDistance(path, targetDistance) {
@@ -5403,24 +6058,63 @@
                     return;
                 }
                 
-                // Move to next point in circuit (maintaining the circular flow)
+                // Move to next point in circuit
                 currentPathIndex = (currentPathIndex + 1) % circuitPath.length;
                 const nextPoint = circuitPath[currentPathIndex];
                 
                 console.log(`Moving particle ${particleIndex} to point ${currentPathIndex}:`, nextPoint);
                 
-                // Animate to next point
-                scene.tweens.add({
-                    targets: [particle, glow],
-                    x: nextPoint.x,
-                    y: nextPoint.y,
-                    duration: animationSpeed,
-                    ease: 'Linear',
-                    onComplete: () => {
-                        // Continue to next point immediately for smooth flow
-                        moveToNextPoint();
-                    }
-                });
+                // Check for large jumps that indicate wrapping (distance > 2 cells)
+                const currentPos = { x: particle.x, y: particle.y };
+                const jumpDistance = Math.sqrt(
+                    Math.pow(nextPoint.x - currentPos.x, 2) + 
+                    Math.pow(nextPoint.y - currentPos.y, 2)
+                );
+                const maxNormalDistance = gameState.cellSize * 2; // 2 cells max for normal movement
+                
+                if (jumpDistance > maxNormalDistance) {
+                    console.log(`Detected large jump (${Math.round(jumpDistance)}px > ${maxNormalDistance}px) - using fade transition`);
+                    
+                    // Fade out at current position
+                    scene.tweens.add({
+                        targets: [particle, glow],
+                        alpha: 0,
+                        duration: animationSpeed / 2,
+                        ease: 'Linear',
+                        onComplete: () => {
+                            // Move to new position instantly
+                            particle.x = nextPoint.x;
+                            particle.y = nextPoint.y;
+                            glow.x = nextPoint.x;
+                            glow.y = nextPoint.y;
+                            
+                            // Fade back in at new position
+                            scene.tweens.add({
+                                targets: [particle, glow],
+                                alpha: 1,
+                                duration: animationSpeed / 2,
+                                ease: 'Linear',
+                                onComplete: () => {
+                                    // Continue to next point
+                                    moveToNextPoint();
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    // Normal smooth movement for adjacent points
+                    scene.tweens.add({
+                        targets: [particle, glow],
+                        x: nextPoint.x,
+                        y: nextPoint.y,
+                        duration: animationSpeed,
+                        ease: 'Linear',
+                        onComplete: () => {
+                            // Continue to next point immediately for smooth flow
+                            moveToNextPoint();
+                        }
+                    });
+                }
             };
             
             // Start the animation
@@ -5534,9 +6228,9 @@
                         console.log('Showing success modal');
                         showSuccessModal();
                     }, 1500);
-                } else if (anyBulbLit && gameState.currentLayout === 'fourth') {
-                    // Stage 4: Show flow visualization even if not all bulbs are lit
-                    console.log('Stage 4 partial completion - showing flow for lit bulbs');
+                } else if (anyBulbLit && (gameState.currentLayout === 'fourth' || gameState.currentLayout === 'fifth')) {
+                    // Stage 4 & 5: Show flow visualization even if not all bulbs are lit
+                    console.log('Stage 4/5 partial completion - showing flow for lit bulbs');
                     showFeedback('⚡ Partial Circuit! Some bulbs are working. Fill more gaps to light all bulbs!', 'info');
                     
                     // Show current flow animation for lit bulbs
@@ -5640,6 +6334,9 @@
                     case 'fourth':
                         stageTitle.textContent = 'Stage 4: Parallel Circuit';
                         break;
+                    case 'fifth':
+                        stageTitle.textContent = 'Stage 5: Series-Parallel Circuit';
+                        break;
                     default:
                         stageTitle.textContent = 'Circuit Game';
                 }
@@ -5694,10 +6391,19 @@
                 });
                 successActions.appendChild(nextStageBtn);
             } else if (gameState.currentLayout === 'fourth') {
-                // Stage 4: Add educational completion message
+                // Stage 4: Add "Next Stage" button to go to Stage 5
+                const nextStageBtn = document.createElement('button');
+                nextStageBtn.innerHTML = '➡️ Next Stage';
+                nextStageBtn.addEventListener('click', function() {
+                    hideSuccessModal();
+                    loadCircuitLayout('fifth');
+                });
+                successActions.appendChild(nextStageBtn);
+            } else if (gameState.currentLayout === 'fifth') {
+                // Stage 5: Add educational completion message
                 const completionBtn = document.createElement('button');
                 completionBtn.id = 'completion-btn';
-                completionBtn.innerHTML = '🎓 Well Done!';
+                completionBtn.innerHTML = '🎓 Game Complete!';
                 completionBtn.addEventListener('click', function() {
                     hideSuccessModal();
                     resetCurrentStage();
@@ -5723,11 +6429,13 @@
                 stageTitle = '🎉 Excellent Work! - Stage 3 Complete';
             } else if (gameState.currentLayout === 'fourth') {
                 stageTitle = '🎉 Excellent Work! - Stage 4 Complete';
+            } else if (gameState.currentLayout === 'fifth') {
+                stageTitle = '🎉 Excellent Work! - Stage 5 Complete';
             }
             
             // Recreate the success modal content structure to ensure it exists
             // Determine if we should use singular or plural for light bulbs
-            const isMultipleBulbs = (gameState.currentLayout === 'third' || gameState.currentLayout === 'fourth');
+            const isMultipleBulbs = (gameState.currentLayout === 'third' || gameState.currentLayout === 'fourth' || gameState.currentLayout === 'fifth');
             const bulbText = isMultipleBulbs ? 'light bulbs are glowing' : 'light bulb is glowing';
             const bulbExplanation = isMultipleBulbs ? 'light bulbs (making them glow)' : 'light bulb (making it glow)';
             
@@ -5861,6 +6569,37 @@
                         </ul>
                         
                         <p style="margin-bottom: 0; color: #333; line-height: 1.4;"><strong>🔧 Key Lesson:</strong> Parallel circuits provide backup paths - if one route fails, electricity finds another way!</p>
+                    </div>
+                `;
+            } else if (gameState.currentLayout === 'fifth') {
+                // Stage 5 educational content about series-parallel circuits
+                materialsHTML += `
+                    <div style="margin-top: 20px; padding: 15px; background-color: #E8F5E8; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                        <h4 style="color: #2E7D32; margin-bottom: 12px;">🎓 What You Learned About Series-Parallel Circuits:</h4>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🔀 What is a Series-Parallel Circuit?</strong> A series-parallel circuit combines both types of connections! Some parts are connected in series (one after another), while other parts are connected in parallel (side by side with multiple paths).</p>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🧩 How it Works in This Stage:</strong></p>
+                        <ul style="margin: 5px 0 10px 20px; color: #333; line-height: 1.4;">
+                            <li><strong>Left bulb:</strong> Connected in series - needs both the 2-cell gap AND the 1-cell gap filled</li>
+                            <li><strong>Right bulbs:</strong> Connected in parallel - both light up when the vertical 3-cell gap is filled</li>
+                        </ul>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>⚡ Key Concepts:</strong></p>
+                        <ul style="margin: 5px 0 10px 20px; color: #333; line-height: 1.4;">
+                            <li>Series parts must ALL work for electricity to flow through that path</li>
+                            <li>Parallel parts can work independently of each other</li>
+                            <li>You can control different groups of lights separately</li>
+                        </ul>
+                        
+                        <p style="margin-bottom: 10px; color: #333; line-height: 1.4;"><strong>🏠 Real-World Examples:</strong></p>
+                        <ul style="margin: 5px 0 10px 20px; color: #333; line-height: 1.4;">
+                            <li>House wiring (main switch controls all, but each room has its own switches)</li>
+                            <li>Car electrical system (ignition in series, but headlights and radio in parallel)</li>
+                            <li>Computer circuits (some components must work together, others work independently)</li>
+                        </ul>
+                        
+                        <p style="margin-bottom: 0; color: #333; line-height: 1.4;"><strong>🎯 Key Lesson:</strong> Series-parallel circuits give you the best of both worlds - you can have parts that must work together AND parts that work independently!</p>
                     </div>
                 `;
             }

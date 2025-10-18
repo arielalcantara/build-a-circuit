@@ -407,3 +407,36 @@
   - Verify that both left and right bulb visual states are properly reset to off position
   - Test reset functionality to ensure clean slate for Stage 4 after reset button is clicked
   - _Requirements: 9.4, 17.7_
+
+- [x] 34. Create Stage 5: Series-Parallel Circuit
+  - Copy Stage 4 configuration as the base for Stage 5
+  - Change 3-cell missing slot at (8,4)-(10,4) to light bulb (bulb2)
+  - Change right light bulb at (11,6)-(13,8) to 3-cell missing slot at (11,6)-(13,6)
+  - Change 1-cell missing slot at (9,10) to light bulb (part of bottom wire)
+  - Add new 1-cell missing slot at (3,10)
+  - Update stage selector to include Stage 5 with "Series-Parallel Circuit" description
+  - Implement findFifthCircuitPath function for series-parallel circuit evaluation
+  - Create drawFifthCircuitPath function for visual path rendering
+  - Add buildFifthCircuitPath function for charge particle animation
+  - Update Stage 4 success modal to include "Next Stage" button to progress to Stage 5
+  - Add Stage 5 completion modal with "Game Complete!" message
+  - Ensure all circuit evaluation, visual rendering, and particle systems work correctly for Stage 5
+  - _Requirements: Multi-stage progression, Series-parallel circuit design, Educational content_
+- [x] 
+36. Update Stage 5: Series-Parallel Circuit with 3 Bulbs and Vertical Gap
+  - Change 3-cell missing slot from horizontal (11,6)-(13,6) to vertical orientation (9,5)-(9,7)
+  - Move first light bulb from (5,6) to (6,6) - shift by 1 cell right
+  - Add third light bulb at (8,9) to (10,11)
+  - Update T-junction positions to (9,4), (7,10), and (9,10)
+  - Update vertical wire positions to include (7,5), (7,9), (9,8)
+  - Rewrite findFifthCircuitPath function to handle series-parallel circuit logic:
+    - Left bulb (bulb1) needs 2-cell gap (3,4)-(4,4) AND 1-cell gap (3,10) filled (series connection)
+    - Right bulbs (bulb2 and bulb3) need vertical 3-cell gap (9,5)-(9,7) filled (parallel connection)
+  - Update drawFifthCircuitPath function for new circuit topology with 3 bulbs
+  - Create buildFifthLeftBulbPath, buildFifthRightBulbPath, buildFifthThirdBulbPath functions
+  - Update preplacedWires configuration for new bulb and gap positions
+  - Add comprehensive educational "What You Learned" section about series-parallel circuits
+  - Include explanations of how series and parallel connections work together
+  - Add real-world examples of series-parallel circuits (house wiring, car electrical systems)
+  - Ensure all circuit evaluation, visual rendering, and particle systems work correctly
+  - _Requirements: Series-parallel circuit design, Educational content, Multiple bulb management_

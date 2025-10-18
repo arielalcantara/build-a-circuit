@@ -25,7 +25,7 @@ This feature involves creating an educational game for children to learn about e
 #### Acceptance Criteria
 
 1. WHEN the game loads THEN the system SHALL display an item bank beside the playing field
-2. WHEN the item bank is displayed THEN the system SHALL show items of varying sizes
+2. WHEN the item bank is displayed THEN the system SHALL show items ordered by ascending cell size: 1-cell items (Copper Coin, Bottle Cap, Lego Brick, Pebble, Button), 2-cell items (Metal Key, Paper Clip, Eraser, Rubber Band), and 3-cell items (Spoon, Metal Ruler, Popsicle Stick, Straw)
 3. WHEN items are displayed THEN the system SHALL clearly label each item as either conductor or insulator
 4. WHEN items are displayed THEN the system SHALL use colored blocks with text labels for visual representation
 
