@@ -286,15 +286,23 @@
   - Clear any visual artifacts from previous short circuit states during stage transitions
   - _Requirements: 19.11_
 
-- [ ] 32. Implement fixed Stage 4 charge flow animation
-  - Rewrite buildFourthCircuitPath function to create two separate, complete circuit paths
-  - Implement left bulb circuit path that follows: battery+ → top wire → left bulb → bottom wire → battery-
-  - Implement right bulb circuit path that follows: battery+ → top wire → right bulb → bottom wire → battery-
-  - Ensure both paths share the common wire segments from battery to T-junction and from T-junction back to battery
-  - Remove any direct jumps between non-adjacent positions in the charge animation
-  - Test that charges flow smoothly along the wire paths without criss-crossing
-  - Verify that the animation clearly shows two parallel electrical paths through the circuit
-  - _Requirements: Stage 4 visual clarity and educational accuracy_
+- [x] 32. Fix Stage 4 circuit evaluation and current flow issues
+  - Fixed findFourthCircuitPath function to properly evaluate parallel circuit paths independently
+  - Updated left bulb to light when only 2-cell gap is filled with conductors, regardless of other gaps
+  - Fixed success modal to only appear when ALL bulbs are lit, not just one
+  - Fixed buildRightBulbPath to only build path when right bulb is actually lit and all required gaps are filled
+  - Fixed buildLeftBulbPath to only build path when left bulb is lit and 2-cell gap is filled
+  - Fixed drawFourthCircuitPath to only draw yellow line paths for lit bulbs (removed unconditional line to (7,4))
+  - Updated circuit evaluation to handle Stage 4 dual bulbs correctly without overriding bulb states
+  - Added comprehensive debugging to path building and particle creation functions
+  - Added debugging to gap detection and item placement verification
+  - **FIXED: Charge particles now display across left bulb's current path when only left bulb is switched on**
+  - Fixed missing `active` property on particles that was preventing animation from starting
+  - Fixed test circuit logic to show flow visualization for Stage 4 partial completion (when only one bulb is lit)
+  - Added special handling in test circuit button to call `visualizeCurrentFlow(true)` when any bulb is lit in Stage 4
+  - Charges now flow through the complete left circuit path: battery positive → (2,4) → gaps (3,4)-(4,4) → (5,4) → (6,4) → (6,5) → left bulb → (6,9) → (6,10) → (5,10) → (4,10) → (3,10) → (2,10) → (1,10) → battery negative
+  - Verified charge particle animation works correctly for partial circuit completion in Stage 4
+  - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.7, 24.8_
 
 - [ ]* 23. Add educational enhancements and additional features
   - Include explanatory text about conductors and insulators
@@ -378,7 +386,8 @@
   - Maintain proper terminal connections for dual bulb configuration
   - _Requirements: 22.2, 22.5, 22.8_
 
-- [-] 31. Fix Stage 4 charge flow to follow proper wire paths instead of criss-crossing
+- [ ] 31. Fix Stage 4 charge flow to follow proper wire paths instead of criss-crossing
+
 
 
 
@@ -389,3 +398,12 @@
   - Remove the criss-crossing behavior where charges from (6,10) jump to (1,5) and charges from (1,9) jump to (6,4)
   - Test charge flow animation to verify proper electrical path visualization for both parallel circuits
   - _Requirements: Stage 4 charge flow accuracy and visual clarity_
+
+- [ ] 33. Fix Stage 4 reset functionality to clear yellow line indicators
+  - Update reset stage functionality to properly clear yellow line indicators for the left light bulb
+  - Ensure all current flow visualizations (yellow lines and charge particles) are cleared when reset is triggered
+  - Clear any active charge particle animations that may be running for the left bulb circuit
+  - Reset all visual indicators to their default state when stage reset occurs
+  - Verify that both left and right bulb visual states are properly reset to off position
+  - Test reset functionality to ensure clean slate for Stage 4 after reset button is clicked
+  - _Requirements: 9.4, 17.7_

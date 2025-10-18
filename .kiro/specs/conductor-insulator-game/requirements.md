@@ -321,3 +321,18 @@ equirement 19
 11. WHEN the "What you learned" section discusses series circuits THEN the system SHALL clearly define what a series circuit is using simple terms like "components connected one after another in a chain"
 12. WHEN explaining series circuits THEN the system SHALL emphasize that all parts must work together for the circuit to function
 13. WHEN the series circuit explanation is provided THEN the system SHALL include visual metaphors that children can understand, such as comparing it to a chain where if one link breaks, the whole chain fails
+
+### Requirement 24
+
+**User Story:** As a child learning about parallel circuits in Stage 4, I want to understand that completing only one path will light only one bulb, so that I can learn how parallel circuits allow independent operation of different branches.
+
+#### Acceptance Criteria
+
+1. WHEN I fill only the 2-cell missing part with a conductor in Stage 4 while leaving other missing parts unfilled or filled with insulators THEN the system SHALL light up only the left light bulb
+2. WHEN only the left circuit path is complete in Stage 4 THEN the system SHALL keep the right light bulb switched off
+3. WHEN only one parallel path is complete in Stage 4 THEN the system SHALL show electrical charges and current flow only through the completed left circuit path
+4. WHEN only the left bulb is lit in Stage 4 THEN the system SHALL NOT display the success modal since not all light bulbs are switched on
+5. WHEN only one bulb is lit in Stage 4 THEN the system SHALL demonstrate that parallel circuits allow independent operation of different branches
+6. WHEN the left path is complete but the right path is incomplete in Stage 4 THEN the system SHALL show current flow from battery positive terminal through the left bulb circuit and back to battery negative terminal
+7. WHEN only partial completion occurs in Stage 4 THEN the system SHALL provide visual feedback showing which circuit path is active and which is inactive
+8. WHEN testing a partially complete Stage 4 circuit THEN the system SHALL accurately represent the electrical behavior of parallel circuits where each branch operates independently
