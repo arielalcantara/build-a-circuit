@@ -329,7 +329,7 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             backdrop-filter: blur(5px);
             margin-top: 0;
-            border-top: none;
+            border-top: 2px solid #4CAF50;
             position: absolute;
             bottom: 0;
         }
@@ -1187,11 +1187,7 @@
                     { x: 6, y: 9 },   // V - Vertical wire (connects to bulb 1)
                     { x: 6, y: 10 },  // T - T-shaped wire at bottom
 
-                    // Vertical connections for bulb 2 area (shifted up)
-                    { x: 9, y: 3 },   // V - Vertical wire (connects to bulb 2 - shifted up)
-
                     // Vertical connections for bulb 3 area
-                    { x: 9, y: 9 },   // V - Vertical wire (connects from bulb 3)
                     { x: 9, y: 11 },  // V - Vertical wire (connects to bulb 3)
 
                     // Vertical connections for vertical gap area
@@ -2012,6 +2008,9 @@
                     if (gameState.bulb.glowEffect) {
                         gameState.bulb.glowEffect.setVisible(false);
                     }
+
+                    // Clear charge animations when bulb is turned off
+                    visualizeCurrentFlow(false);
                 }
                 gameState.bulb.isLit = isLit;
             }
@@ -2545,9 +2544,49 @@
                         console.log('Gap indicator shown for dragging item');
                     }
 
-                    // Re-evaluate circuit immediately when item is removed from grid
-                    // This ensures bulbs turn off when items are dragged away
-                    evaluateCircuit();
+                    // Set up drag state for drop zone highlighting
+                    gameState.draggedItem = item;
+                    gameState.isDragging = true;
+
+                    // Show drop zone highlights (including red dashed outline for the now-empty gap)
+                    highlightDropZones(true);
+
+                    // For ALL stages, immediately clear all visual indicators when any item is removed
+                    const stageMap = {
+                        'first': '1',
+                        'second': '2',
+                        'third': '3',
+                        'fourth': '4',
+                        'fifth': '5'
+                    };
+                    const stageNumber = stageMap[gameState.currentLayout] || 'Unknown';
+                    console.log(`Item removed from stage ${stageNumber} - immediately clearing all visual indicators`);
+
+                    // Turn off all bulbs immediately (single bulb for stages 1-2, multiple bulbs for stages 3-5)
+                    if (gameState.bulb) {
+                        // Single bulb (stages 1-2)
+                        gameState.bulb.isLit = false;
+                        if (gameState.bulb.bulbSprite && gameState.bulb.bulbSprite.setFrame) {
+                            gameState.bulb.bulbSprite.setFrame(0);
+                        }
+                    }
+                    if (gameState.bulbs) {
+                        // Multiple bulbs (stages 3-5)
+                        gameState.bulbs.forEach((bulb, index) => {
+                            bulb.isLit = false;
+                            if (bulb.bulbSprite && bulb.bulbSprite.setFrame) {
+                                bulb.bulbSprite.setFrame(0);
+                            }
+                        });
+                    }
+
+                    // Clear all visual indicators immediately
+                    visualizeCurrentFlow(false);
+                    clearConnectionGraphics();
+                    gameState.circuitState = 'incomplete';
+
+                    // Skip circuit re-evaluation since we've already handled the bulb states
+                    console.log(`Visual indicators cleared for stage ${stageNumber} - skipping re-evaluation`);
 
                     // Visual feedback - make semi-transparent and bring to front
                     if (this.htmlElement) {
@@ -2730,6 +2769,9 @@
                     console.log('Item original position:', item.originalGridX, item.originalGridY);
                     console.log('Item current position:', item.gridX, item.gridY);
                     console.log('Distance from original:', distance);
+
+                    // Hide drop zone highlights
+                    highlightDropZones(false);
 
                     // Clean up temporary drag state
                     gameState.draggedItem = null;
@@ -3049,6 +3091,40 @@
             // Ensure all drop zone highlights are cleared (removes green highlighting)
             highlightDropZones(false);
 
+            // For ALL stages, immediately clear all visual indicators when any item is removed
+            const stageMap = {
+                'first': '1',
+                'second': '2',
+                'third': '3',
+                'fourth': '4',
+                'fifth': '5'
+            };
+            const stageNumber = stageMap[gameState.currentLayout] || 'Unknown';
+            console.log(`Item removal completed in stage ${stageNumber} - clearing all visual indicators`);
+
+            // Turn off all bulbs immediately (single bulb for stages 1-2, multiple bulbs for stages 3-5)
+            if (gameState.bulb) {
+                // Single bulb (stages 1-2)
+                gameState.bulb.isLit = false;
+                if (gameState.bulb.bulbSprite && gameState.bulb.bulbSprite.setFrame) {
+                    gameState.bulb.bulbSprite.setFrame(0);
+                }
+            }
+            if (gameState.bulbs) {
+                // Multiple bulbs (stages 3-5)
+                gameState.bulbs.forEach((bulb, index) => {
+                    bulb.isLit = false;
+                    if (bulb.bulbSprite && bulb.bulbSprite.setFrame) {
+                        bulb.bulbSprite.setFrame(0);
+                    }
+                });
+            }
+
+            // Clear all visual indicators immediately
+            visualizeCurrentFlow(false);
+            clearConnectionGraphics();
+            gameState.circuitState = 'incomplete';
+
             // Reset item state
             item.inBank = true;
             item.placed = false;
@@ -3125,6 +3201,51 @@
         }
 
         function placeItemOnGrid(item, gridX, gridY, needsRotation = false) {
+            // Safety check: ensure item is not null
+            if (!item) {
+                console.error('placeItemOnGrid called with null item');
+                return;
+            }
+
+            console.log('Placing item on grid:', item.name, 'at position:', gridX, gridY, 'rotation:', needsRotation);
+
+            // Safety check: ensure no existing sprites at target position
+            const effectiveWidth = needsRotation ? item.size.height : item.size.width;
+            const effectiveHeight = needsRotation ? item.size.width : item.size.height;
+
+            for (let dy = 0; dy < effectiveHeight; dy++) {
+                for (let dx = 0; dx < effectiveWidth; dx++) {
+                    const existingItem = getGridPosition(gridX + dx, gridY + dy);
+                    if (existingItem && existingItem !== 'gap' && existingItem.sprite) {
+                        console.warn('Found existing sprite at position, cleaning up:', gridX + dx, gridY + dy);
+                        try {
+                            // Make invisible immediately
+                            if (existingItem.sprite.setVisible) {
+                                existingItem.sprite.setVisible(false);
+                            }
+                            if (existingItem.sprite.setAlpha) {
+                                existingItem.sprite.setAlpha(0);
+                            }
+
+                            // Destroy the sprite
+                            if (existingItem.sprite.destroy) {
+                                existingItem.sprite.destroy();
+                            }
+                            existingItem.sprite = null;
+                        } catch (error) {
+                            console.warn('Error cleaning up existing sprite:', error);
+                            // Force invisible as fallback
+                            try {
+                                if (existingItem.sprite && existingItem.sprite.setVisible) {
+                                    existingItem.sprite.setVisible(false);
+                                }
+                            } catch (fallbackError) {
+                                console.warn('Fallback sprite cleanup failed:', fallbackError);
+                            }
+                        }
+                    }
+                }
+            }
 
             // Hide HTML element
             if (item.htmlElement) {
@@ -3144,8 +3265,7 @@
             item.gridY = gridY;
 
             // Update grid - mark all cells occupied by this item (considering rotation)
-            const effectiveWidth = needsRotation ? item.size.height : item.size.width;
-            const effectiveHeight = needsRotation ? item.size.width : item.size.height;
+            // (effectiveWidth and effectiveHeight already declared above for safety check)
 
             for (let dy = 0; dy < effectiveHeight; dy++) {
                 for (let dx = 0; dx < effectiveWidth; dx++) {
@@ -3264,6 +3384,11 @@
             // Get current message to avoid unnecessary updates
             const currentMessage = feedbackArea.textContent;
 
+            // Don't override important error messages like blocking materials
+            if (currentMessage.includes('Some materials are blocking electricity')) {
+                return; // Keep the blocking materials message visible
+            }
+
             if (allGapsFilled && !isCircuitRunning) {
                 // If all slots are filled, circuit is not running, and we're not already showing the "ready" message
                 if (!currentMessage.includes('Click "Run Circuit" when you\'re ready.')) {
@@ -3371,6 +3496,215 @@
             updateDropZoneHighlight(e.clientX, e.clientY);
         }
 
+        function forceCleanupSpritesAtPosition(gridX, gridY, gapSize) {
+            console.log('Force cleaning up sprites at position:', gridX, gridY, 'size:', gapSize);
+
+            // Get all sprites from the scene
+            if (scene && scene.children) {
+                const allSprites = scene.children.list;
+                const spritesToRemove = [];
+
+                // Find sprites that overlap with the target area
+                for (let sprite of allSprites) {
+                    if (sprite && sprite.x !== undefined && sprite.y !== undefined) {
+                        const spriteGridX = Math.floor(sprite.x / gameState.cellSize);
+                        const spriteGridY = Math.floor(sprite.y / gameState.cellSize);
+
+                        // Check if sprite overlaps with target area
+                        if (spriteGridX >= gridX && spriteGridX < gridX + gapSize.width &&
+                            spriteGridY >= gridY && spriteGridY < gridY + gapSize.height) {
+
+                            // Skip battery, bulb, and wire sprites
+                            if (sprite.texture && sprite.texture.key &&
+                                !sprite.texture.key.includes('battery') &&
+                                !sprite.texture.key.includes('bulb') &&
+                                !sprite.texture.key.includes('wire')) {
+                                spritesToRemove.push(sprite);
+                                console.log('Found sprite to remove at grid position:', spriteGridX, spriteGridY);
+                            }
+                        }
+                    }
+                }
+
+                // Remove found sprites
+                spritesToRemove.forEach(sprite => {
+                    try {
+                        if (sprite.setVisible) {
+                            sprite.setVisible(false);
+                        }
+                        if (sprite.destroy) {
+                            sprite.destroy();
+                        }
+                    } catch (error) {
+                        console.warn('Error force removing sprite:', error);
+                    }
+                });
+
+                console.log('Force removed', spritesToRemove.length, 'sprites');
+            }
+
+            // Also clean up any HTML elements at the position
+            const canvas = document.querySelector('canvas');
+            if (canvas && canvas.parentElement) {
+                const container = canvas.parentElement;
+                const htmlElements = container.querySelectorAll('div[style*="position: absolute"]');
+
+                htmlElements.forEach(element => {
+                    const left = parseInt(element.style.left);
+                    const top = parseInt(element.style.top);
+                    const elementGridX = Math.floor(left / gameState.cellSize);
+                    const elementGridY = Math.floor(top / gameState.cellSize);
+
+                    if (elementGridX >= gridX && elementGridX < gridX + gapSize.width &&
+                        elementGridY >= gridY && elementGridY < gridY + gapSize.height) {
+                        console.log('Removing HTML element at position:', elementGridX, elementGridY);
+                        element.remove();
+                    }
+                });
+            }
+        }
+
+        function removeItemFromGrid(item) {
+            console.log('Removing item from grid:', item.name);
+            console.log('Item sprite exists:', !!item.sprite);
+            console.log('Item position:', item.gridX, item.gridY);
+            console.log('Item placed status:', item.placed);
+
+            // Destroy sprite if it exists with thorough cleanup
+            if (item.sprite) {
+                try {
+                    console.log('Destroying sprite for item:', item.name);
+
+                    // Make sprite invisible immediately
+                    if (item.sprite.setVisible) {
+                        item.sprite.setVisible(false);
+                    }
+
+                    // Clear any graphics or textures first
+                    if (item.sprite.clear) {
+                        item.sprite.clear(true, true);
+                    }
+
+                    // If it's a group, destroy all children first
+                    if (item.sprite.children && item.sprite.children.length > 0) {
+                        const children = [...item.sprite.children]; // Create copy to avoid modification during iteration
+                        children.forEach(child => {
+                            try {
+                                if (child.setVisible) {
+                                    child.setVisible(false);
+                                }
+                                if (child.destroy) {
+                                    child.destroy();
+                                }
+                            } catch (childError) {
+                                console.warn('Error destroying child sprite:', childError);
+                            }
+                        });
+                    }
+
+                    // Remove from scene if it has a parent
+                    if (item.sprite.parentContainer) {
+                        item.sprite.parentContainer.remove(item.sprite);
+                    } else if (item.sprite.scene && item.sprite.scene.children) {
+                        item.sprite.scene.children.remove(item.sprite);
+                    }
+
+                    // Finally destroy the main sprite
+                    item.sprite.destroy();
+                    console.log('Sprite destroyed successfully for item:', item.name);
+                } catch (error) {
+                    console.warn('Error destroying sprite for item:', item.name, error);
+                    // Force cleanup even if destroy fails
+                    try {
+                        if (item.sprite.setVisible) {
+                            item.sprite.setVisible(false);
+                        }
+                        if (item.sprite.setAlpha) {
+                            item.sprite.setAlpha(0);
+                        }
+                    } catch (fallbackError) {
+                        console.warn('Fallback cleanup also failed:', fallbackError);
+                    }
+                }
+                item.sprite = null;
+            }
+
+            // Clear grid positions
+            const effectiveWidth = item.isRotated ? item.size.height : item.size.width;
+            const effectiveHeight = item.isRotated ? item.size.width : item.size.height;
+
+            for (let dy = 0; dy < effectiveHeight; dy++) {
+                for (let dx = 0; dx < effectiveWidth; dx++) {
+                    setGridPosition(item.gridX + dx, item.gridY + dy, null);
+                }
+            }
+
+            // Handle gap state
+            const gap = gameState.gaps.find(g => {
+                return g.x === item.gridX && g.y === item.gridY &&
+                    ((item.isRotated && g.size.width === item.size.height && g.size.height === item.size.width) ||
+                        (!item.isRotated && g.size.width === item.size.width && g.size.height === item.size.height));
+            });
+
+            if (gap) {
+                gap.filled = false;
+                gap.filledWith = null;
+                if (gap.sprite) {
+                    gap.sprite.setVisible(true);
+                }
+            }
+
+            // Remove from placed items array
+            const itemIndex = gameState.placedItems.indexOf(item);
+            if (itemIndex > -1) {
+                gameState.placedItems.splice(itemIndex, 1);
+            }
+
+            // Reset item state
+            item.inBank = true;
+            item.placed = false;
+            item.gridX = -1;
+            item.gridY = -1;
+            item.isRotated = false;
+
+            // Show HTML element again
+            if (item.htmlElement) {
+                item.htmlElement.style.display = 'flex';
+                item.htmlElement.style.cursor = 'grab';
+                item.htmlElement.style.opacity = '1';
+                item.htmlElement.style.transform = 'scale(1)';
+            }
+
+            // Turn off circuit and clear all visual indicators when item is replaced
+            console.log('Turning off circuit due to item replacement');
+
+            // Turn off all bulbs immediately
+            if (gameState.bulb) {
+                // Single bulb (stages 1-2)
+                gameState.bulb.isLit = false;
+                if (gameState.bulb.bulbSprite && gameState.bulb.bulbSprite.setFrame) {
+                    gameState.bulb.bulbSprite.setFrame(0);
+                }
+            }
+            if (gameState.bulbs) {
+                // Multiple bulbs (stages 3-5)
+                gameState.bulbs.forEach((bulb, index) => {
+                    bulb.isLit = false;
+                    if (bulb.bulbSprite && bulb.bulbSprite.setFrame) {
+                        bulb.bulbSprite.setFrame(0);
+                    }
+                });
+            }
+
+            // Clear all visual indicators immediately
+            visualizeCurrentFlow(false);
+            clearConnectionGraphics();
+            gameState.circuitState = 'incomplete';
+
+            // Update wire connections
+            updateWireConnections();
+        }
+
         function handleDragEnd(e) {
             if (!gameState.isDragging || !gameState.draggedItem) return;
 
@@ -3384,14 +3718,47 @@
             const dropResult = checkDropLocation(e.clientX, e.clientY);
 
             if (dropResult.valid) {
-                // Place item on grid with rotation if needed
-                placeItemOnGrid(gameState.draggedItem, dropResult.gridX, dropResult.gridY, dropResult.needsRotation);
+                // If this is a replacement, remove the existing item first
+                if (dropResult.isReplacement && dropResult.gap && dropResult.gap.filledWith) {
+                    const existingItem = dropResult.gap.filledWith;
+                    console.log('Replacing existing item:', existingItem.name, 'with sprite:', existingItem.sprite);
+                    console.log('Existing item position:', existingItem.gridX, existingItem.gridY);
+                    console.log('Gap position:', dropResult.gap.x, dropResult.gap.y);
+
+                    // Remove the existing item from the grid with thorough sprite cleanup
+                    removeItemFromGrid(existingItem);
+
+                    // Additional cleanup: force remove any sprites at the target position
+                    forceCleanupSpritesAtPosition(dropResult.gridX, dropResult.gridY, dropResult.gap.size);
+
+                    // Show replacement feedback
+                    showFeedback(`🔄 Replaced ${existingItem.name} with ${gameState.draggedItem.name}`, 'info');
+
+                    // Capture the dragged item before timeout to prevent it from becoming null
+                    const itemToPlace = gameState.draggedItem;
+                    const targetX = dropResult.gridX;
+                    const targetY = dropResult.gridY;
+                    const needsRot = dropResult.needsRotation;
+
+                    // Small delay to ensure sprite cleanup completes before placing new item
+                    setTimeout(() => {
+                        placeItemOnGrid(itemToPlace, targetX, targetY, needsRot);
+                        // Clean up drag state after placement is complete
+                        cleanupDrag();
+                    }, 10);
+
+                    // Don't call cleanupDrag() immediately for replacements - it's called in setTimeout
+                    return;
+                } else {
+                    // Place new item on grid with rotation if needed (no replacement)
+                    placeItemOnGrid(gameState.draggedItem, dropResult.gridX, dropResult.gridY, dropResult.needsRotation);
+                }
             } else {
                 // Return to bank (item stays in bank)
                 console.log('Invalid drop location - item stays in bank');
             }
 
-            // Clean up
+            // Clean up (only called for non-replacement cases)
             cleanupDrag();
         }
 
@@ -3474,10 +3841,9 @@
             // Check if there's a gap that matches the item size (normal orientation)
             let matchingGap = gameState.gaps.find(gap => {
                 console.log('Checking gap:', gap.x, gap.y, 'filled:', gap.filled, 'size:', gap.size);
-                if (gap.filled ||
-                    gap.size.width !== draggedItem.size.width ||
+                if (gap.size.width !== draggedItem.size.width ||
                     gap.size.height !== draggedItem.size.height) {
-                    console.log('Gap rejected - filled or size mismatch');
+                    console.log('Gap rejected - size mismatch');
                     return false;
                 }
 
@@ -3496,8 +3862,7 @@
             // If no normal match, check for rotated match (for 3-cell items in vertical gaps)
             if (!matchingGap && draggedItem.size.width === 3 && draggedItem.size.height === 1) {
                 matchingGap = gameState.gaps.find(gap => {
-                    if (gap.filled ||
-                        gap.size.width !== 1 || gap.size.height !== 3) {
+                    if (gap.size.width !== 1 || gap.size.height !== 3) {
                         return false;
                     }
 
@@ -3516,29 +3881,44 @@
             }
 
             if (matchingGap) {
-                // Check if all cells that the item would occupy are empty
-                let allCellsEmpty = true;
-                const checkWidth = needsRotation ? draggedItem.size.height : draggedItem.size.width;
-                const checkHeight = needsRotation ? draggedItem.size.width : draggedItem.size.height;
-
-                for (let dy = 0; dy < checkHeight; dy++) {
-                    for (let dx = 0; dx < checkWidth; dx++) {
-                        if (!isGridPositionEmpty(matchingGap.x + dx, matchingGap.y + dy)) {
-                            allCellsEmpty = false;
-                            break;
-                        }
-                    }
-                    if (!allCellsEmpty) break;
-                }
-
-                if (allCellsEmpty) {
+                // For filled gaps, we allow replacement if the gap is filled with an item
+                // For empty gaps, check if all cells are empty
+                if (matchingGap.filled) {
+                    // Allow replacement - the existing item will be removed
                     return {
                         valid: true,
                         gridX: matchingGap.x,
                         gridY: matchingGap.y,
                         gap: matchingGap,
-                        needsRotation: needsRotation
+                        needsRotation: needsRotation,
+                        isReplacement: true
                     };
+                } else {
+                    // Check if all cells that the item would occupy are empty
+                    let allCellsEmpty = true;
+                    const checkWidth = needsRotation ? draggedItem.size.height : draggedItem.size.width;
+                    const checkHeight = needsRotation ? draggedItem.size.width : draggedItem.size.height;
+
+                    for (let dy = 0; dy < checkHeight; dy++) {
+                        for (let dx = 0; dx < checkWidth; dx++) {
+                            if (!isGridPositionEmpty(matchingGap.x + dx, matchingGap.y + dy)) {
+                                allCellsEmpty = false;
+                                break;
+                            }
+                        }
+                        if (!allCellsEmpty) break;
+                    }
+
+                    if (allCellsEmpty) {
+                        return {
+                            valid: true,
+                            gridX: matchingGap.x,
+                            gridY: matchingGap.y,
+                            gap: matchingGap,
+                            needsRotation: needsRotation,
+                            isReplacement: false
+                        };
+                    }
                 }
             }
 
@@ -3549,7 +3929,12 @@
             const draggedItem = gameState.draggedItem;
 
             gameState.gaps.forEach(gap => {
-                if (!gap.filled && gap.sprite) {
+                if (gap.sprite) {
+                    // Make gap sprite visible during drag operations so we can show highlights
+                    if (show) {
+                        gap.sprite.setVisible(true);
+                    }
+
                     const graphics = gap.sprite.getChildren()[0]; // Get the graphics object
 
                     // Calculate gap size based on the gap's size property
@@ -3581,15 +3966,12 @@
                     }
 
                     if (show && isCompatible) {
-                        // Show solid green highlight for compatible gaps
+                        // Show solid green highlight for all compatible gaps (both empty and filled)
+                        // since we now support replacement
                         graphics.lineStyle(3, 0x4CAF50, 1.0);
                         graphics.strokeRect(x, y, width, height);
-                    } else if (show && !isCompatible) {
-                        // Show orange highlight for incompatible gaps
-                        graphics.lineStyle(2, 0xFF9800, 0.6);
-                        graphics.strokeRect(x, y, width, height);
-                    } else {
-                        // Show dashed red outline (default state) - use same logic as markGaps
+                    } else if (show && !isCompatible && !gap.filled) {
+                        // Show red dashed outline for empty incompatible gaps during drag
                         graphics.lineStyle(2, 0xFF6B6B, 0.8);
 
                         const dashLength = 5;
@@ -3624,6 +4006,51 @@
                         }
 
                         graphics.strokePath();
+                    } else if (show && !isCompatible && gap.filled) {
+                        // Show orange highlight for filled incompatible gaps during drag
+                        graphics.lineStyle(2, 0xFF9800, 0.6);
+                        graphics.strokeRect(x, y, width, height);
+                    } else if (!gap.filled) {
+                        // Show dashed red outline for empty gaps (default state when not dragging)
+                        graphics.lineStyle(2, 0xFF6B6B, 0.8);
+
+                        const dashLength = 5;
+                        const gapLength = 5;
+
+                        // Top line
+                        for (let i = 0; i < width; i += dashLength + gapLength) {
+                            const lineWidth = Math.min(dashLength, width - i);
+                            graphics.moveTo(x + i, y);
+                            graphics.lineTo(x + i + lineWidth, y);
+                        }
+
+                        // Bottom line
+                        for (let i = 0; i < width; i += dashLength + gapLength) {
+                            const lineWidth = Math.min(dashLength, width - i);
+                            graphics.moveTo(x + i, y + height);
+                            graphics.lineTo(x + i + lineWidth, y + height);
+                        }
+
+                        // Left line
+                        for (let i = 0; i < height; i += dashLength + gapLength) {
+                            const lineHeight = Math.min(dashLength, height - i);
+                            graphics.moveTo(x, y + i);
+                            graphics.lineTo(x, y + i + lineHeight);
+                        }
+
+                        // Right line
+                        for (let i = 0; i < height; i += dashLength + gapLength) {
+                            const lineHeight = Math.min(dashLength, height - i);
+                            graphics.moveTo(x + width, y + i);
+                            graphics.lineTo(x + width, y + i + lineHeight);
+                        }
+
+                        graphics.strokePath();
+                    }
+
+                    // When not showing highlights, hide filled gap sprites again
+                    if (!show && gap.filled) {
+                        gap.sprite.setVisible(false);
                     }
                 }
             });
@@ -3734,24 +4161,52 @@
             if (unfilledGaps.length > 0) {
                 console.log('Not all gaps are filled:', unfilledGaps.length, 'remaining');
 
-                // For stages 4 and 5, we still need to evaluate individual bulb paths
-                // even when not all gaps are filled, so bulbs can be turned off appropriately
-                if (gameState.currentLayout === 'fourth') {
-                    console.log('Stage 4: Evaluating individual bulb paths despite unfilled gaps');
-                    findFourthCircuitPath(); // Evaluate stage 4 circuit paths
-                    updateWireConnections();
-                    return false;
-                } else if (gameState.currentLayout === 'fifth') {
-                    console.log('Stage 5: Evaluating individual bulb paths despite unfilled gaps');
-                    findFifthCircuitPath(); // This will turn off bulbs as needed
-                    updateWireConnections();
-                    return false;
-                } else {
-                    // For other stages, use the original logic
-                    showFeedback(`Please fill all ${unfilledGaps.length} missing part${unfilledGaps.length > 1 ? 's' : ''} before testing the circuit.`, 'error');
-                    updateLightBulb(false);
-                    return false;
+                // For ALL stages, when ANY gap is unfilled, turn off ALL bulbs and clear ALL visual indicators
+                const stageMap = {
+                    'first': '1',
+                    'second': '2',
+                    'third': '3',
+                    'fourth': '4',
+                    'fifth': '5'
+                };
+                const stageNumber = stageMap[gameState.currentLayout] || 'Unknown';
+                console.log(`Stage ${stageNumber}: Circuit incomplete - turning off all bulbs and clearing visual indicators`);
+
+                // Turn off ALL bulbs immediately (single bulb for stages 1-2, multiple bulbs for stages 3-5)
+                if (gameState.bulb) {
+                    // Single bulb (stages 1-2)
+                    console.log(`  Turning off single bulb`);
+                    gameState.bulb.isLit = false;
+                    if (gameState.bulb.bulbSprite && gameState.bulb.bulbSprite.setFrame) {
+                        gameState.bulb.bulbSprite.setFrame(0); // Frame 0 = unlit bulb
+                    }
                 }
+                if (gameState.bulbs) {
+                    // Multiple bulbs (stages 3-5)
+                    gameState.bulbs.forEach((bulb, index) => {
+                        console.log(`  Turning off bulb ${index + 1}`);
+                        bulb.isLit = false;
+                        if (bulb.bulbSprite && bulb.bulbSprite.setFrame) {
+                            bulb.bulbSprite.setFrame(0); // Frame 0 = unlit bulb
+                        }
+                    });
+                }
+
+                // Clear ALL visual indicators immediately
+                console.log('  Clearing all current flow visualization');
+                visualizeCurrentFlow(false);
+
+                // Clear connection graphics to remove yellow lines
+                console.log('  Clearing connection graphics');
+                clearConnectionGraphics();
+
+                // Set circuit state to incomplete
+                gameState.circuitState = 'incomplete';
+
+                // Show feedback message
+                showFeedback(`Please fill all ${unfilledGaps.length} missing part${unfilledGaps.length > 1 ? 's' : ''} before testing the circuit.`, 'error');
+
+                return false;
             }
             // First check for short circuit (Stage 2 only)
             console.log('Checking for short circuit...');
@@ -4089,6 +4544,11 @@
                     }
                 });
             }
+
+            // Clear charge animations when bulbs are turned off
+            if (!isLit) {
+                visualizeCurrentFlow(false);
+            }
         }
 
         function findThirdCircuitPath() {
@@ -4216,6 +4676,12 @@
                         console.log('  WARNING: Could not set frame - sprite or setFrame missing');
                     }
                 }
+
+                // Force clear visual indicators if no bulbs are lit
+                if (!leftBulbShouldLight && !rightBulbShouldLight) {
+                    console.log('Stage 4 - No bulbs lit, clearing visual indicators');
+                    visualizeCurrentFlow(false);
+                }
             } else {
                 console.log('Stage 4 - WARNING: gameState.bulbs is null/undefined');
             }
@@ -4317,6 +4783,12 @@
                         console.log('  Frame set to:', bulbs2And3ShouldLight ? 1 : 0);
                     }
                 }
+
+                // Force clear visual indicators if no bulbs are lit
+                if (!bulb1ShouldLight && !bulbs2And3ShouldLight) {
+                    console.log('Stage 5 - No bulbs lit, clearing visual indicators');
+                    visualizeCurrentFlow(false);
+                }
             } else {
                 console.log('Stage 5 - WARNING: gameState.bulbs is null/undefined');
             }
@@ -4356,6 +4828,14 @@
             const isCircuitLit = (gameState.bulb && gameState.bulb.isLit) ||
                 (gameState.bulbs && gameState.bulbs.some(bulb => bulb.isLit)) ||
                 gameState.circuitState === 'short_circuit';
+
+            console.log('updateWireConnections - isCircuitLit check:', {
+                singleBulb: gameState.bulb ? gameState.bulb.isLit : 'N/A',
+                bulbsArray: gameState.bulbs ? gameState.bulbs.map(b => b.isLit) : 'N/A',
+                shortCircuit: gameState.circuitState === 'short_circuit',
+                finalResult: isCircuitLit
+            });
+
             if (isCircuitLit) {
                 drawContinuousPathOnly();
             }
@@ -6512,10 +6992,10 @@
                 }
 
                 // Check if we've completed too many loops
-                if (completedLoops >= maxLoops) {
-                    console.log(`Particle ${particleIndex} completed ${maxLoops} loops, stopping to prevent accumulation`);
-                    return;
-                }
+                // if (completedLoops >= maxLoops) {
+                //     console.log(`Particle ${particleIndex} completed ${maxLoops} loops, stopping to prevent accumulation`);
+                //     return;
+                // }
 
                 // Move to next point in circuit
                 const nextIndex = (currentPathIndex + 1) % circuitPath.length;
@@ -6587,17 +7067,17 @@
             // Start the animation
             moveToNextPoint();
 
-            // Add a safety timeout to stop animation after 15 seconds to prevent accumulation
-            setTimeout(() => {
-                if (particle && particle.active) {
-                    console.log(`Safety timeout: stopping particle ${particleIndex} animation`);
-                    particle.active = false;
-                    // Kill any remaining tweens for this particle
-                    if (scene && scene.tweens) {
-                        scene.tweens.killTweensOf([particle, glow]);
-                    }
-                }
-            }, 15000);
+            // // Add a safety timeout to stop animation after 15 seconds to prevent accumulation
+            // setTimeout(() => {
+            //     if (particle && particle.active) {
+            //         console.log(`Safety timeout: stopping particle ${particleIndex} animation`);
+            //         particle.active = false;
+            //         // Kill any remaining tweens for this particle
+            //         if (scene && scene.tweens) {
+            //             scene.tweens.killTweensOf([particle, glow]);
+            //         }
+            //     }
+            // }, 15000);
         }
 
 
@@ -6740,7 +7220,8 @@
         });
 
         document.getElementById('reset-stage-btn').addEventListener('click', function () {
-            console.log('Reset button clicked - functionality will be added later');
+            console.log('Reset stage button clicked');
+            resetCurrentStage();
         });
 
         // Stage selector menu functionality
@@ -7829,6 +8310,10 @@
                     }
                 });
             }
+
+            // Clear all charge particles and current flow animations immediately
+            console.log('Reset: Clearing all charge particles and flow visualization');
+            visualizeCurrentFlow(false);
 
             // 1. Remove all placed items from circuit by scanning the entire grid
             for (let y = 0; y < gameState.gridHeight; y++) {
