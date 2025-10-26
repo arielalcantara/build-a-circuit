@@ -336,3 +336,22 @@ equirement 19
 6. WHEN the left path is complete but the right path is incomplete in Stage 4 THEN the system SHALL show current flow from battery positive terminal through the left bulb circuit and back to battery negative terminal
 7. WHEN only partial completion occurs in Stage 4 THEN the system SHALL provide visual feedback showing which circuit path is active and which is inactive
 8. WHEN testing a partially complete Stage 4 circuit THEN the system SHALL accurately represent the electrical behavior of parallel circuits where each branch operates independently
+
+### Requirement 25
+
+**User Story:** As a child using the game on smaller screens where the item bank doesn't fit beside the grid area, I want to access items through a tabbed menu at the bottom of the grid area, so that I can still easily select and drag items to build circuits.
+
+#### Acceptance Criteria
+
+1. WHEN the screen size is too small to display the item bank beside the grid area THEN the system SHALL hide the side item bank
+2. WHEN the side item bank is hidden THEN the system SHALL display a tabbed menu interface at the bottom of the grid area
+3. WHEN the tabbed menu is displayed THEN the system SHALL show three tabs: "1-Cell Items", "2-Cell Items", and "3-Cell Items"
+4. WHEN the tabbed menu loads THEN the system SHALL default to showing the "1-Cell Items" tab as active
+5. WHEN I click on the "1-Cell Items" tab THEN the system SHALL display all 1-cell items (Copper Coin, Bottle Cap, Lego Brick, Pebble, Button)
+6. WHEN I click on the "2-Cell Items" tab THEN the system SHALL display all 2-cell items (Metal Key, Paper Clip, Eraser, Rubber Band)
+7. WHEN I click on the "3-Cell Items" tab THEN the system SHALL display all 3-cell items (Spoon, Metal Ruler, Popsicle Stick, Straw)
+8. WHEN items are displayed in the tabbed menu THEN the system SHALL maintain the same visual representation and labeling as the side item bank
+9. WHEN I drag items from the tabbed menu THEN the system SHALL provide the same drag-and-drop functionality as the side item bank
+10. WHEN the tabbed menu is active THEN the system SHALL maintain all tooltip functionality for item identification
+11. WHEN switching between tabs THEN the system SHALL preserve the current quantities of items in each category
+12. WHEN the screen size changes to accommodate the side item bank THEN the system SHALL automatically switch back to the side item bank layout and hide the tabbed menu
